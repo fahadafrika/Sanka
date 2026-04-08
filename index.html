@@ -1,31 +1,120 @@
-<script>
-    // Correct SHA-256 hash for "SANKA@2026"
-    const secureHash = "96ef6e4a01ac8a6b95e707616c8f4bddfb83b8975aa379f9ee0b73957fc7669a";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sanka</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    async function validate() {
-        const input = document.getElementById("pass-field").value.trim();
-        const msg = document.getElementById("error-msg");
-
-        if (!input) return;
-
-        const encoder = new TextEncoder();
-        const data = encoder.encode(input);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const inputHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-        if (inputHash === secureHash) {
-            document.getElementById("login-gate").style.display = "none";
-            document.getElementById("content").style.display = "block";
-        } else {
-            msg.style.display = "block";
-            document.getElementById("pass-field").value = "";
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
         }
-    }
 
-    document.getElementById("pass-field").addEventListener("keypress", function(event) {
-        if (event.key === "Enter") {
-            validate();
+        #login-gate {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 320px;
         }
-    });
-</script>
+
+        #login-gate h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        #pass-field {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 12px;
+            outline: none;
+        }
+
+        #pass-field:focus {
+            border-color: #555;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #222;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover { background: #444; }
+
+        #error-msg {
+            display: none;
+            color: red;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        #content {
+            display: none;
+            padding: 40px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- LOGIN GATE -->
+    <div id="login-gate">
+        <h2>Welcome to Sanka</h2>
+        <input type="password" id="pass-field" placeholder="Enter password" />
+        <button onclick="validate()">Enter</button>
+        <p id="error-msg">❌ Incorrect password. Try again.</p>
+    </div>
+
+    <!-- YOUR ACTUAL CONTENT GOES HERE -->
+    <div id="content">
+        <h1>Welcome 👋</h1>
+        <p>You are now inside the site. Replace this with your real content.</p>
+    </div>
+
+    <script>
+        const secureHash = "96ef6e4a01ac8a6b95e707616c8f4bddfb83b8975aa379f9ee0b73957fc7669a";
+
+        async function validate() {
+            const input = document.getElementById("pass-field").value.trim();
+            const msg = document.getElementById("error-msg");
+
+            if (!input) return;
+
+            const encoder = new TextEncoder();
+            const data = encoder.encode(input);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const inputHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+            if (inputHash === secureHash) {
+                document.getElementById("login-gate").style.display = "none";
+                document.getElementById("content").style.display = "block";
+            } else {
+                msg.style.display = "block";
+                document.getElementById("pass-field").value = "";
+            }
+        }
+
+        document.getElementById("pass-field").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") validate();
+        });
+    </script>
+
+</body>
+</html>
