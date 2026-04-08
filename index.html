@@ -1,55 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sanka Inventory</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<style>
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:Arial,sans-serif;background:#f0f0f0;min-height:100vh;}
-#login-gate{display:flex;justify-content:center;align-items:center;min-height:100vh;}
-.login-box{background:white;padding:40px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.1);text-align:center;width:320px;}
-.login-box h2{margin-bottom:20px;color:#333;}
-#pass-field{width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:16px;margin-bottom:12px;outline:none;}
-#pass-field:focus{border-color:#555;}
-#login-btn{width:100%;padding:12px;background:#222;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer;}
-#login-btn:hover{background:#444;}
-#error-msg{display:none;color:red;margin-top:10px;font-size:14px;}
-#content{display:none;padding:20px;}
-button{cursor:pointer;}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sanka</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f0f0f0; min-height: 100vh; }
+
+        #login-gate {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 320px;
+        }
+        .login-box h2 { margin-bottom: 20px; color: #333; }
+        #pass-field {
+            width: 100%; padding: 12px; border: 1px solid #ddd;
+            border-radius: 8px; font-size: 16px; margin-bottom: 12px;
+            outline: none; box-sizing: border-box;
+        }
+        #pass-field:focus { border-color: #555; }
+        #login-btn {
+            width: 100%; padding: 12px; background: #222; color: white;
+            border: none; border-radius: 8px; font-size: 16px; cursor: pointer;
+        }
+        #login-btn:hover { background: #444; }
+        #error-msg { display: none; color: red; margin-top: 10px; font-size: 14px; }
+        #content { display: none; }
+    </style>
 </head>
 <body>
 
 <div id="login-gate">
-  <div class="login-box">
-    <h2>Welcome to Sanka</h2>
-    <input type="password" id="pass-field" placeholder="Enter password" />
-    <button id="login-btn" onclick="validate()">Enter</button>
-    <p id="error-msg">❌ Incorrect password. Try again.</p>
-  </div>
+    <div class="login-box">
+        <h2>Welcome to Sanka</h2>
+        <input type="password" id="pass-field" placeholder="Enter password" />
+        <button id="login-btn" onclick="validate()">Enter</button>
+        <p id="error-msg">❌ Incorrect password. Try again.</p>
+    </div>
 </div>
 
 <div id="content">
-  <div id="inventory-root"></div>
+    <div id="inventory-root"></div>
 </div>
 
 <script>
-// PASSWORD GATE
+// ─── PASSWORD GATE ─────────────────────────────────────────────────────
 const secureHash = "96ef6e4a01ac8a6b95e707616c8f4bddfb83b8975aa379f9ee0b73957fc7669a";
 
-async function validate(){
+async function validate() {
     const input = document.getElementById("pass-field").value.trim();
     const msg = document.getElementById("error-msg");
-    if(!input) return;
+    if (!input) return;
     const encoder = new TextEncoder();
     const data = encoder.encode(input);
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const inputHash = hashArray.map(b=>b.toString(16).padStart(2,'0')).join('');
-    if(inputHash === secureHash){
+    const inputHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    if (inputHash === secureHash) {
         document.getElementById("login-gate").style.display = "none";
         document.getElementById("content").style.display = "block";
         mountInventory();
@@ -58,64 +77,467 @@ async function validate(){
         document.getElementById("pass-field").value = "";
     }
 }
-
-document.getElementById("pass-field").addEventListener("keypress", function(e){
-    if(e.key==="Enter") validate();
+document.getElementById("pass-field").addEventListener("keypress", function(e) {
+    if (e.key === "Enter") validate();
 });
 
-// STORAGE
-const ITEMS_KEY = "sanka-inventory-v1";
+// ─── STORAGE ────────────────────────────────────────────────────────────
+const ITEMS_KEY   = "sanka-inventory-v1";
 const FLAVORS_KEY = "sanka-flavors-v1";
 
-const DEFAULT_FLAVORS = ["Durban Curry","Chicken","Beef","Original","Cheese","BBQ","Tomato","Spicy","Plain","Strawberry","Bubblegum","Cola","Lemon","Grape","Watermelon"];
+const DEFAULT_FLAVORS = [
+    "Durban Curry", "Chicken", "Beef", "Original", "Cheese",
+    "BBQ", "Tomato", "Spicy", "Plain", "Strawberry",
+    "Bubblegum", "Cola", "Lemon", "Grape", "Watermelon"
+];
 
-function loadItems(){try{const r=localStorage.getItem(ITEMS_KEY); return r?JSON.parse(r):[];}catch{return []}}
-function loadFlavors(){try{const r=localStorage.getItem(FLAVORS_KEY); return r?JSON.parse(r):DEFAULT_FLAVORS;}catch{return DEFAULT_FLAVORS}}
-function saveItems(v){localStorage.setItem(ITEMS_KEY,JSON.stringify(v))}
-function saveFlavors(v){localStorage.setItem(FLAVORS_KEY,JSON.stringify(v))}
+function loadItems()   { try { const r = localStorage.getItem(ITEMS_KEY);   return r ? JSON.parse(r) : []; } catch { return []; } }
+function loadFlavors() { try { const r = localStorage.getItem(FLAVORS_KEY); return r ? JSON.parse(r) : DEFAULT_FLAVORS; } catch { return DEFAULT_FLAVORS; } }
+function saveItems(v)   { localStorage.setItem(ITEMS_KEY,   JSON.stringify(v)); }
+function saveFlavors(v) { localStorage.setItem(FLAVORS_KEY, JSON.stringify(v)); }
 
-// APP
-function mountInventory(){
+// ─── APP ─────────────────────────────────────────────────────────────────
+function mountInventory() {
     const { useState } = React;
     const e = React.createElement;
 
-    function App(){
-        const [items,setItems] = useState(loadItems());
-        const [flavors,setFlavors] = useState(loadFlavors());
-        const [newItem,setNewItem] = useState({name:"",category:"",quantity:0,price:0});
-        
-        function addItem(){
-            if(!newItem.name) return alert("Name required");
-            const id = Date.now();
-            const updated = [...items,{...newItem,id}];
-            setItems(updated); saveItems(updated);
-            setNewItem({name:"",category:"",quantity:0,price:0});
-        }
-        function deleteItem(id){
-            if(!confirm("Delete this item?")) return;
-            const updated = items.filter(it=>it.id!==id);
-            setItems(updated); saveItems(updated);
+    // ── small shared components ──────────────────────────────────────────
+    function Badge({ children, color }) {
+        const styles = {
+            green:  { background: "#d1fae5", color: "#065f46" },
+            red:    { background: "#fee2e2", color: "#991b1b" },
+            orange: { background: "#ffedd5", color: "#9a3412" },
+            gray:   { background: "#f3f4f6", color: "#6b7280" },
+        };
+        return e("span", {
+            style: { ...(styles[color] || styles.gray), padding: "2px 9px", borderRadius: 999, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }
+        }, children);
+    }
+
+    function Btn({ onClick, style, children, title }) {
+        return e("button", { onClick, title, style: { border: "none", borderRadius: 8, width: 34, height: 34, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, ...style } }, children);
+    }
+
+    // ── FLAVOR MANAGER MODAL ─────────────────────────────────────────────
+    function FlavorManager({ flavors, onClose, onSave }) {
+        const [list, setList] = useState([...flavors]);
+        const [newFlavor, setNewFlavor] = useState("");
+
+        function add() {
+            const trimmed = newFlavor.trim();
+            if (!trimmed || list.includes(trimmed)) return;
+            setList([...list, trimmed]);
+            setNewFlavor("");
         }
 
-        return e("div",null,
-            e("h1",null,"📦 Inventory"),
-            e("div",{style:{marginBottom:12}},
-                e("input",{placeholder:"Name",value:newItem.name,onChange:e=>setNewItem({...newItem,name:e.target.value})}),
-                e("input",{placeholder:"Category",value:newItem.category,onChange:e=>setNewItem({...newItem,category:e.target.value})}),
-                e("input",{type:"number",placeholder:"Qty",value:newItem.quantity,onChange:e=>setNewItem({...newItem,quantity:Number(e.target.value)})}),
-                e("input",{type:"number",placeholder:"Price",value:newItem.price,onChange:e=>setNewItem({...newItem,price:Number(e.target.value)})}),
-                e("button",{onClick:addItem,style:{marginLeft:10,padding:"4px 10px"}}, "Add Item")
-            ),
-            items.map(it=>e("div",{key:it.id,style:{padding:10,border:"1px solid #ddd",borderRadius:6,marginBottom:6,display:"flex",justifyContent:"space-between"}},
-                e("div",null,`${it.name} - ${it.category} - Qty:${it.quantity} - R${it.price}`),
-                e("button",{onClick:()=>deleteItem(it.id)},"Delete")
-            ))
+        function remove(f) { setList(list.filter(x => x !== f)); }
+
+        return e("div", {
+            style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 300 },
+            onClick: ev => { if (ev.target === ev.currentTarget) onClose(); }
+        },
+            e("div", { style: { background: "white", borderRadius: "20px 20px 0 0", padding: "24px 24px 40px", width: "100%", maxWidth: 520, maxHeight: "80vh", overflowY: "auto" } },
+                e("div", { style: { fontWeight: 800, fontSize: 18, marginBottom: 6, color: "#1a1a2e" } }, "🎨 Manage Flavors"),
+                e("div", { style: { fontSize: 13, color: "#888", marginBottom: 20 } }, "These are available for all items. Add or remove as needed."),
+
+                // add new
+                e("div", { style: { display: "flex", gap: 8, marginBottom: 16 } },
+                    e("input", {
+                        value: newFlavor,
+                        onChange: ev => setNewFlavor(ev.target.value),
+                        onKeyDown: ev => { if (ev.key === "Enter") add(); },
+                        placeholder: "New flavor name...",
+                        style: { flex: 1, padding: "10px 14px", borderRadius: 10, border: "1.5px solid #e5e5e5", fontSize: 14, outline: "none" }
+                    }),
+                    e("button", {
+                        onClick: add,
+                        style: { padding: "10px 18px", borderRadius: 10, background: "#1a1a2e", color: "white", border: "none", fontWeight: 700, cursor: "pointer" }
+                    }, "Add")
+                ),
+
+                // list
+                e("div", { style: { display: "flex", flexDirection: "column", gap: 6, marginBottom: 24 } },
+                    list.map(f => e("div", { key: f, style: { display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f9f9f9", borderRadius: 10, padding: "10px 14px" } },
+                        e("span", { style: { fontSize: 14, fontWeight: 600 } }, f),
+                        e("button", {
+                            onClick: () => remove(f),
+                            style: { background: "#fee2e2", border: "none", borderRadius: 7, padding: "4px 10px", color: "#991b1b", fontWeight: 700, cursor: "pointer", fontSize: 13 }
+                        }, "Remove")
+                    ))
+                ),
+
+                e("div", { style: { display: "flex", gap: 10 } },
+                    e("button", { onClick: onClose, style: { flex: 1, padding: 13, borderRadius: 12, border: "1.5px solid #ddd", background: "white", fontSize: 15, fontWeight: 700, cursor: "pointer" } }, "Cancel"),
+                    e("button", { onClick: () => { onSave(list); onClose(); }, style: { flex: 2, padding: 13, borderRadius: 12, border: "none", background: "#1a1a2e", color: "white", fontSize: 15, fontWeight: 800, cursor: "pointer" } }, "Save Flavors")
+                )
+            )
         );
     }
 
-    ReactDOM.render(e(App),document.getElementById("inventory-root"));
+    // ── ITEM MODAL (add / edit) ──────────────────────────────────────────
+    function ItemModal({ modal, flavors, onClose, onSubmit }) {
+        const isAdd = modal === "add";
+        const [form, setForm] = useState(isAdd
+            ? { name: "", category: "", quantity: "", price: "", priceUp: false, flavors: [] }
+            : {
+                name:     modal.item.name,
+                category: modal.item.category || "",
+                quantity: String(modal.item.quantity),
+                price:    modal.item.price ? String(modal.item.price) : "",
+                priceUp:  modal.item.priceUp || false,
+                flavors:  modal.item.flavors ? modal.item.flavors.map(f => ({ ...f })) : [],
+            }
+        );
+        const [flavorSearch, setFlavorSearch] = useState("");
+
+        function toggleFlavor(name) {
+            const exists = form.flavors.find(f => f.name === name);
+            if (exists) {
+                setForm({ ...form, flavors: form.flavors.filter(f => f.name !== name) });
+            } else {
+                setForm({ ...form, flavors: [...form.flavors, { name, quantity: 0, outOfStock: false }] });
+            }
+        }
+
+        function setFlavorQty(name, qty) {
+            setForm({ ...form, flavors: form.flavors.map(f => f.name === name ? { ...f, quantity: Math.max(0, parseInt(qty) || 0), outOfStock: (parseInt(qty) || 0) === 0 } : f) });
+        }
+
+        function toggleFlavorStock(name) {
+            setForm({ ...form, flavors: form.flavors.map(f => f.name === name ? { ...f, outOfStock: !f.outOfStock, quantity: !f.outOfStock ? 0 : f.quantity } : f) });
+        }
+
+        const visibleFlavors = flavors.filter(f => f.toLowerCase().includes(flavorSearch.toLowerCase()));
+        const selectedNames = form.flavors.map(f => f.name);
+
+        return e("div", {
+            style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 200 },
+            onClick: ev => { if (ev.target === ev.currentTarget) onClose(); }
+        },
+            e("div", { style: { background: "white", borderRadius: "20px 20px 0 0", padding: "24px 24px 40px", width: "100%", maxWidth: 520, maxHeight: "92vh", overflowY: "auto" } },
+                e("div", { style: { fontWeight: 800, fontSize: 18, marginBottom: 20, color: "#1a1a2e" } }, isAdd ? "➕ Add New Item" : "✏️ Edit Item"),
+
+                // basic fields
+                ...[
+                    { label: "Item Name *", key: "name",     placeholder: "e.g. Maggi Noodles",      type: "text"   },
+                    { label: "Category",    key: "category", placeholder: "e.g. Noodles, Sweets",    type: "text"   },
+                    { label: "Total Qty",   key: "quantity", placeholder: "Overall stock count",      type: "number" },
+                    { label: "Price (R)",   key: "price",    placeholder: "e.g. 5.50",               type: "number" },
+                ].map(f => e("div", { key: f.key, style: { marginBottom: 14 } },
+                    e("label", { style: { fontSize: 12, fontWeight: 700, color: "#555", display: "block", marginBottom: 5 } }, f.label),
+                    e("input", {
+                        type: f.type, value: form[f.key],
+                        onChange: ev => setForm({ ...form, [f.key]: ev.target.value }),
+                        placeholder: f.placeholder,
+                        style: { width: "100%", padding: "11px 14px", borderRadius: 10, border: "1.5px solid #e5e5e5", fontSize: 15, outline: "none", boxSizing: "border-box" }
+                    })
+                )),
+
+                // price up toggle
+                e("div", {
+                    onClick: () => setForm({ ...form, priceUp: !form.priceUp }),
+                    style: { display: "flex", alignItems: "center", gap: 12, background: form.priceUp ? "#fff7ed" : "#f9f9f9", border: `1.5px solid ${form.priceUp ? "#fed7aa" : "#ebebeb"}`, borderRadius: 10, padding: "12px 16px", marginBottom: 20, cursor: "pointer" }
+                },
+                    e("div", { style: { width: 42, height: 24, borderRadius: 12, background: form.priceUp ? "#f59e0b" : "#ddd", position: "relative", flexShrink: 0, transition: "background 0.2s" } },
+                        e("div", { style: { position: "absolute", top: 3, left: form.priceUp ? 21 : 3, width: 18, height: 18, borderRadius: "50%", background: "white", transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.2)" } })
+                    ),
+                    e("div", null,
+                        e("div", { style: { fontWeight: 700, fontSize: 14 } }, "Price Increased"),
+                        e("div", { style: { fontSize: 12, color: "#888" } }, "Flag this item's price went up")
+                    )
+                ),
+
+                // ── FLAVORS SECTION
+                e("div", { style: { marginBottom: 20 } },
+                    e("div", { style: { fontWeight: 700, fontSize: 14, color: "#1a1a2e", marginBottom: 10 } }, "🎨 Flavors / Variants"),
+
+                    // selected flavors with qty
+                    form.flavors.length > 0 && e("div", { style: { marginBottom: 12 } },
+                        e("div", { style: { fontSize: 12, color: "#888", marginBottom: 6 } }, "Selected — set quantity per flavor:"),
+                        e("div", { style: { display: "flex", flexDirection: "column", gap: 6 } },
+                            form.flavors.map(f => e("div", { key: f.name, style: { display: "flex", alignItems: "center", gap: 8, background: f.outOfStock ? "#fff5f5" : "#f0fdf4", border: `1.5px solid ${f.outOfStock ? "#fecaca" : "#bbf7d0"}`, borderRadius: 10, padding: "8px 12px" } },
+                                e("div", { style: { width: 8, height: 8, borderRadius: "50%", background: f.outOfStock ? "#ef4444" : "#10b981", flexShrink: 0 } }),
+                                e("span", { style: { flex: 1, fontSize: 13, fontWeight: 600 } }, f.name),
+                                e("input", {
+                                    type: "number", value: f.quantity,
+                                    onChange: ev => setFlavorQty(f.name, ev.target.value),
+                                    style: { width: 60, padding: "4px 8px", borderRadius: 7, border: "1.5px solid #ddd", fontSize: 13, textAlign: "center", outline: "none" }
+                                }),
+                                e("button", {
+                                    onClick: () => toggleFlavorStock(f.name),
+                                    title: f.outOfStock ? "Mark in stock" : "Mark finished",
+                                    style: { background: f.outOfStock ? "#d1fae5" : "#fee2e2", border: "none", borderRadius: 7, width: 28, height: 28, cursor: "pointer", fontSize: 13, flexShrink: 0 }
+                                }, f.outOfStock ? "✅" : "🔴"),
+                                e("button", {
+                                    onClick: () => toggleFlavor(f.name),
+                                    style: { background: "#fee2e2", border: "none", borderRadius: 7, width: 28, height: 28, cursor: "pointer", fontSize: 13, flexShrink: 0 }
+                                }, "✕")
+                            ))
+                        )
+                    ),
+
+                    // flavor picker
+                    e("input", {
+                        value: flavorSearch,
+                        onChange: ev => setFlavorSearch(ev.target.value),
+                        placeholder: "Search flavors to add...",
+                        style: { width: "100%", padding: "9px 14px", borderRadius: 10, border: "1.5px solid #e5e5e5", fontSize: 13, outline: "none", boxSizing: "border-box", marginBottom: 8 }
+                    }),
+                    e("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 } },
+                        visibleFlavors.map(f => {
+                            const selected = selectedNames.includes(f);
+                            return e("button", {
+                                key: f,
+                                onClick: () => toggleFlavor(f),
+                                style: {
+                                    padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: "pointer", border: "1.5px solid",
+                                    background: selected ? "#1a1a2e" : "white",
+                                    color:      selected ? "white"    : "#555",
+                                    borderColor: selected ? "#1a1a2e" : "#ddd",
+                                }
+                            }, (selected ? "✓ " : "") + f);
+                        })
+                    )
+                ),
+
+                e("div", { style: { display: "flex", gap: 10 } },
+                    e("button", { onClick: onClose, style: { flex: 1, padding: 13, borderRadius: 12, border: "1.5px solid #ddd", background: "white", fontSize: 15, fontWeight: 700, cursor: "pointer" } }, "Cancel"),
+                    e("button", { onClick: () => onSubmit(form), style: { flex: 2, padding: 13, borderRadius: 12, border: "none", background: "#1a1a2e", color: "white", fontSize: 15, fontWeight: 800, cursor: "pointer" } }, isAdd ? "Add Item" : "Save Changes")
+                )
+            )
+        );
+    }
+
+    // ── MAIN APP ─────────────────────────────────────────────────────────
+    function App() {
+        const [items,   setItems]   = useState(loadItems);
+        const [flavors, setFlavors] = useState(loadFlavors);
+        const [search,  setSearch]  = useState("");
+        const [filter,  setFilter]  = useState("all");
+        const [modal,   setModal]   = useState(null);
+        const [toast,   setToast]   = useState(null);
+        const [deleteConfirm, setDeleteConfirm] = useState(null);
+        const [showFlavorMgr, setShowFlavorMgr] = useState(false);
+        const [expandedId, setExpandedId] = useState(null);
+
+        function persist(newItems) { setItems(newItems); saveItems(newItems); }
+
+        function showToast(msg) { setToast(msg); setTimeout(() => setToast(null), 3000); }
+
+        function handleSubmit(form) {
+            if (!form.name.trim()) return showToast("⚠️ Item name is required");
+            const qty = parseInt(form.quantity);
+            if (isNaN(qty) || qty < 0) return showToast("⚠️ Enter a valid quantity");
+
+            if (modal === "add") {
+                const newItem = {
+                    id: Date.now(),
+                    name:     form.name.trim(),
+                    category: form.category.trim(),
+                    quantity: qty,
+                    price:    form.price ? parseFloat(form.price) : null,
+                    priceUp:  form.priceUp,
+                    outOfStock: qty === 0,
+                    flavors:  form.flavors,
+                };
+                persist([newItem, ...items]);
+                showToast(`✅ "${newItem.name}" added`);
+            } else {
+                persist(items.map(i => i.id === modal.item.id
+                    ? { ...i, name: form.name.trim(), category: form.category.trim(), quantity: qty, price: form.price ? parseFloat(form.price) : null, priceUp: form.priceUp, outOfStock: qty === 0, flavors: form.flavors }
+                    : i
+                ));
+                showToast(`✏️ "${form.name.trim()}" updated`);
+            }
+            setModal(null);
+        }
+
+        function toggleOutOfStock(id) {
+            const item = items.find(i => i.id === id);
+            persist(items.map(i => i.id === id ? { ...i, outOfStock: !i.outOfStock, quantity: !i.outOfStock ? 0 : i.quantity } : i));
+            showToast(item.outOfStock ? `🟢 "${item.name}" back in stock` : `🔴 "${item.name}" marked finished`);
+        }
+
+        function doDelete() {
+            persist(items.filter(i => i.id !== deleteConfirm.id));
+            showToast(`🗑️ "${deleteConfirm.name}" deleted`);
+            setDeleteConfirm(null);
+        }
+
+        function saveFlavorsHandler(list) {
+            setFlavors(list);
+            saveFlavors(list);
+            showToast("✅ Flavor list updated");
+        }
+
+        const filtered = items.filter(item => {
+            const matchSearch = item.name.toLowerCase().includes(search.toLowerCase()) ||
+                (item.category || "").toLowerCase().includes(search.toLowerCase());
+            if (filter === "instock")  return matchSearch && !item.outOfStock;
+            if (filter === "finished") return matchSearch && item.outOfStock;
+            if (filter === "priceup")  return matchSearch && item.priceUp;
+            return matchSearch;
+        });
+
+        const stats = {
+            total:    items.length,
+            inStock:  items.filter(i => !i.outOfStock).length,
+            finished: items.filter(i => i.outOfStock).length,
+            priceUp:  items.filter(i => i.priceUp).length,
+        };
+
+        return e("div", { style: { minHeight: "100vh", background: "#fafaf8", fontFamily: "'DM Sans', Arial, sans-serif", paddingBottom: 60 } },
+
+            // ── HEADER
+            e("div", { style: { background: "#1a1a2e", color: "white", padding: "24px 24px 20px", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 16px rgba(0,0,0,0.2)" } },
+                e("div", { style: { maxWidth: 720, margin: "0 auto" } },
+                    e("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 } },
+                        e("div", null,
+                            e("div", { style: { fontSize: 22, fontWeight: 800 } }, "🛒 Sanka Stock"),
+                            e("div", { style: { fontSize: 12, color: "#a0a0c0", marginTop: 2 } }, "Inventory Manager")
+                        ),
+                        e("div", { style: { display: "flex", gap: 8 } },
+                            e("button", {
+                                onClick: () => setShowFlavorMgr(true),
+                                style: { background: "rgba(255,255,255,0.1)", color: "white", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 10, padding: "10px 14px", fontWeight: 700, fontSize: 13, cursor: "pointer" }
+                            }, "🎨 Flavors"),
+                            e("button", {
+                                onClick: () => setModal("add"),
+                                style: { background: "#f59e0b", color: "#1a1a2e", border: "none", borderRadius: 10, padding: "10px 18px", fontWeight: 800, fontSize: 14, cursor: "pointer" }
+                            }, "+ Add Item")
+                        )
+                    ),
+                    e("div", { style: { display: "flex", gap: 10, flexWrap: "wrap" } },
+                        [
+                            { label: "Total",    value: stats.total,    color: "#a0a0c0" },
+                            { label: "In Stock", value: stats.inStock,  color: "#6ee7b7" },
+                            { label: "Finished", value: stats.finished, color: "#fca5a5" },
+                            { label: "Price ↑",  value: stats.priceUp,  color: "#fcd34d" },
+                        ].map(s => e("div", { key: s.label, style: { background: "rgba(255,255,255,0.07)", borderRadius: 8, padding: "6px 14px", display: "flex", gap: 8, alignItems: "center" } },
+                            e("span", { style: { fontSize: 18, fontWeight: 800, color: s.color } }, s.value),
+                            e("span", { style: { fontSize: 11, color: "#a0a0c0" } }, s.label)
+                        ))
+                    )
+                )
+            ),
+
+            // ── SEARCH + FILTER
+            e("div", { style: { maxWidth: 720, margin: "0 auto", padding: "20px 16px 0" } },
+                e("div", { style: { display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" } },
+                    e("input", {
+                        value: search, onChange: ev => setSearch(ev.target.value),
+                        placeholder: "🔍 Search items...",
+                        style: { flex: 1, minWidth: 180, padding: "10px 14px", borderRadius: 10, border: "1.5px solid #e5e5e5", fontSize: 14, background: "white", outline: "none" }
+                    }),
+                    e("select", {
+                        value: filter, onChange: ev => setFilter(ev.target.value),
+                        style: { padding: "10px 14px", borderRadius: 10, border: "1.5px solid #e5e5e5", fontSize: 14, background: "white", cursor: "pointer", outline: "none" }
+                    },
+                        e("option", { value: "all" },      "All Items"),
+                        e("option", { value: "instock" },  "In Stock"),
+                        e("option", { value: "finished" }, "Finished"),
+                        e("option", { value: "priceup" },  "Price Increased")
+                    )
+                ),
+
+                // ── ITEMS LIST
+                filtered.length === 0
+                    ? e("div", { style: { textAlign: "center", padding: "60px 20px", color: "#aaa" } },
+                        e("div", { style: { fontSize: 48, marginBottom: 12 } }, "📦"),
+                        e("div", { style: { fontSize: 16, fontWeight: 600 } }, "No items found"),
+                        e("div", { style: { fontSize: 13, marginTop: 6 } }, items.length === 0 ? "Tap '+ Add Item' to get started" : "Try a different search or filter")
+                      )
+                    : e("div", { style: { display: "flex", flexDirection: "column", gap: 10 } },
+                        filtered.map(item => {
+                            const isExpanded = expandedId === item.id;
+                            const hasFlavors = item.flavors && item.flavors.length > 0;
+                            const availFlavors = hasFlavors ? item.flavors.filter(f => !f.outOfStock).length : null;
+
+                            // STOCK STATUS COLOR LOGIC
+                            let statusColor = "#10b981"; // Default Green
+                            let shadowColor = "#d1fae5";
+                            
+                            if (item.outOfStock) {
+                                statusColor = "#ef4444"; // Red
+                                shadowColor = "#fee2e2";
+                            } else if (item.quantity <= 3) {
+                                statusColor = "#f59e0b"; // Yellow/Orange
+                                shadowColor = "#fef3c7";
+                            }
+
+                            return e("div", { key: item.id, style: { background: item.outOfStock ? "#fff5f5" : "white", border: `1.5px solid ${item.outOfStock ? "#fecaca" : item.priceUp ? "#fde68a" : "#ebebeb"}`, borderRadius: 14, overflow: "hidden" } },
+
+                                // main row
+                                e("div", { style: { padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 } },
+                                    e("div", { style: { width: 12, height: 12, borderRadius: "50%", background: statusColor, flexShrink: 0, boxShadow: `0 0 0 3px ${shadowColor}` } }),
+
+                                    e("div", { style: { flex: 1, minWidth: 0 } },
+                                        e("div", { style: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" } },
+                                            e("span", { style: { fontWeight: 700, fontSize: 15, color: item.outOfStock ? "#999" : "#1a1a2e", textDecoration: item.outOfStock ? "line-through" : "none" } }, item.name),
+                                            item.priceUp && e(Badge, { color: "orange" }, "Price ↑"),
+                                            item.outOfStock && e(Badge, { color: "red" }, "Finished")
+                                        ),
+                                        e("div", { style: { display: "flex", gap: 12, marginTop: 4, flexWrap: "wrap", alignItems: "center" } },
+                                            item.category && e("span", { style: { fontSize: 12, color: "#888" } }, "📁 " + item.category),
+                                            e("span", { style: { fontSize: 12, fontWeight: (item.quantity <= 3 && !item.outOfStock) ? 700 : 400, color: item.outOfStock ? "#999" : (item.quantity <= 3 ? "#d97706" : "#555") } },
+                                                "Qty: " + item.quantity + (item.quantity <= 3 && !item.outOfStock && item.quantity > 0 ? " ⚠️" : "")
+                                            ),
+                                            item.price && e("span", { style: { fontSize: 12, color: "#555" } }, "R" + item.price.toFixed(2)),
+                                            // flavor summary pill
+                                            hasFlavors && e("button", {
+                                                onClick: () => setExpandedId(isExpanded ? null : item.id),
+                                                style: { background: "#f0f4ff", border: "1px solid #c7d2fe", borderRadius: 999, padding: "2px 10px", fontSize: 11, fontWeight: 700, color: "#4338ca", cursor: "pointer" }
+                                            }, `🎨 ${availFlavors}/${item.flavors.length} flavors ${isExpanded ? "▲" : "▼"}`)
+                                        )
+                                    ),
+
+                                    e("div", { style: { display: "flex", gap: 6, flexShrink: 0 } },
+                                        e(Btn, { onClick: () => toggleOutOfStock(item.id), title: item.outOfStock ? "Mark in stock" : "Mark finished", style: { background: item.outOfStock ? "#d1fae5" : "#fee2e2" } }, item.outOfStock ? "✅" : "🔴"),
+                                        e(Btn, { onClick: () => setModal({ type: "edit", item }), title: "Edit", style: { background: "#e0e7ff" } }, "✏️"),
+                                        e(Btn, { onClick: () => setDeleteConfirm(item), title: "Delete", style: { background: "#fef2f2" } }, "🗑️")
+                                    )
+                                ),
+
+                                // ── FLAVOR PANEL (expanded)
+                                isExpanded && hasFlavors && e("div", { style: { borderTop: "1px solid #f0f0f0", padding: "12px 16px 14px", background: "#fafafa" } },
+                                    e("div", { style: { fontSize: 11, fontWeight: 700, color: "#888", marginBottom: 8, letterSpacing: "0.05em", textTransform: "uppercase" } }, "Flavors"),
+                                    e("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 } },
+                                        item.flavors.map(f => e("div", { key: f.name, style: { display: "flex", alignItems: "center", gap: 6, background: f.outOfStock ? "#fee2e2" : "#d1fae5", border: `1px solid ${f.outOfStock ? "#fca5a5" : "#6ee7b7"}`, borderRadius: 999, padding: "4px 12px" } },
+                                            e("div", { style: { width: 7, height: 7, borderRadius: "50%", background: f.outOfStock ? "#ef4444" : "#10b981", flexShrink: 0 } }),
+                                            e("span", { style: { fontSize: 12, fontWeight: 700, color: f.outOfStock ? "#991b1b" : "#065f46" } }, f.name),
+                                            e("span", { style: { fontSize: 11, color: f.outOfStock ? "#b91c1c" : "#047857", fontWeight: 600 } }, f.outOfStock ? "✕ Finished" : `× ${f.quantity}`)
+                                        ))
+                                    )
+                                )
+                            );
+                        })
+                    )
+            ),
+
+            // ── MODALS
+            modal        && e(ItemModal,      { modal, flavors, onClose: () => setModal(null), onSubmit: handleSubmit }),
+            showFlavorMgr && e(FlavorManager, { flavors, onClose: () => setShowFlavorMgr(false), onSave: saveFlavorsHandler }),
+
+            // ── DELETE CONFIRM
+            deleteConfirm && e("div", { style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300, padding: 20 } },
+                e("div", { style: { background: "white", borderRadius: 16, padding: 28, maxWidth: 320, width: "100%", textAlign: "center" } },
+                    e("div", { style: { fontSize: 40, marginBottom: 12 } }, "🗑️"),
+                    e("div", { style: { fontWeight: 800, fontSize: 17, marginBottom: 8 } }, "Delete Item?"),
+                    e("div", { style: { color: "#666", fontSize: 14, marginBottom: 24 } }, `Are you sure you want to delete "${deleteConfirm.name}"? This cannot be undone.`),
+                    e("div", { style: { display: "flex", gap: 10 } },
+                        e("button", { onClick: () => setDeleteConfirm(null), style: { flex: 1, padding: 12, borderRadius: 10, border: "1.5px solid #ddd", background: "white", fontWeight: 700, cursor: "pointer" } }, "Cancel"),
+                        e("button", { onClick: doDelete, style: { flex: 1, padding: 12, borderRadius: 10, border: "none", background: "#ef4444", color: "white", fontWeight: 800, cursor: "pointer" } }, "Delete")
+                    )
+                )
+            ),
+
+            // ── TOAST
+            toast && e("div", { style: { position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: "#1a1a2e", color: "white", padding: "12px 24px", borderRadius: 12, fontWeight: 600, fontSize: 14, boxShadow: "0 4px 20px rgba(0,0,0,0.2)", zIndex: 400, whiteSpace: "nowrap" } }, toast)
+        );
+    }
+
+    ReactDOM.render(React.createElement(App), document.getElementById("inventory-root"));
 }
 </script>
-
 </body>
 </html>
