@@ -453,23 +453,11 @@ function mountInventory() {
                             const hasFlavors = item.flavors && item.flavors.length > 0;
                             const availFlavors = hasFlavors ? item.flavors.filter(f => !f.outOfStock).length : null;
 
-                            // STOCK STATUS COLOR LOGIC
-                            let statusColor = "#10b981"; // Default Green
-                            let shadowColor = "#d1fae5";
-                            
-                            if (item.outOfStock) {
-                                statusColor = "#ef4444"; // Red
-                                shadowColor = "#fee2e2";
-                            } else if (item.quantity <= 3) {
-                                statusColor = "#f59e0b"; // Yellow/Orange
-                                shadowColor = "#fef3c7";
-                            }
-
                             return e("div", { key: item.id, style: { background: item.outOfStock ? "#fff5f5" : "white", border: `1.5px solid ${item.outOfStock ? "#fecaca" : item.priceUp ? "#fde68a" : "#ebebeb"}`, borderRadius: 14, overflow: "hidden" } },
 
                                 // main row
                                 e("div", { style: { padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 } },
-                                    e("div", { style: { width: 12, height: 12, borderRadius: "50%", background: statusColor, flexShrink: 0, boxShadow: `0 0 0 3px ${shadowColor}` } }),
+                                    e("div", { style: { width: 12, height: 12, borderRadius: "50%", background: item.outOfStock ? "#ef4444" : "#10b981", flexShrink: 0, boxShadow: `0 0 0 3px ${item.outOfStock ? "#fee2e2" : "#d1fae5"}` } }),
 
                                     e("div", { style: { flex: 1, minWidth: 0 } },
                                         e("div", { style: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" } },
@@ -479,8 +467,8 @@ function mountInventory() {
                                         ),
                                         e("div", { style: { display: "flex", gap: 12, marginTop: 4, flexWrap: "wrap", alignItems: "center" } },
                                             item.category && e("span", { style: { fontSize: 12, color: "#888" } }, "📁 " + item.category),
-                                            e("span", { style: { fontSize: 12, fontWeight: (item.quantity <= 3 && !item.outOfStock) ? 700 : 400, color: item.outOfStock ? "#999" : (item.quantity <= 3 ? "#d97706" : "#555") } },
-                                                "Qty: " + item.quantity + (item.quantity <= 3 && !item.outOfStock && item.quantity > 0 ? " ⚠️" : "")
+                                            e("span", { style: { fontSize: 12, fontWeight: item.quantity <= 3 ? 700 : 400, color: item.quantity <= 3 && !item.outOfStock ? "#ef4444" : "#555" } },
+                                                "Qty: " + item.quantity + (item.quantity <= 3 && item.quantity > 0 ? " ⚠️" : "")
                                             ),
                                             item.price && e("span", { style: { fontSize: 12, color: "#555" } }, "R" + item.price.toFixed(2)),
                                             // flavor summary pill
