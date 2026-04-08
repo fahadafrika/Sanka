@@ -3,45 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sanka | Protected</title>
+    <title>Sanka | Secure Portal</title>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f4f4f4; margin: 0; }
-        .login-box { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
-        input { padding: 10px; width: 80%; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; }
-        button { padding: 10px 20px; background: #000; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
-        #content { display: none; } /* This hides your store until login */
+        body { font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #000; color: white; margin: 0; }
+        .login-box { background: #111; padding: 40px; border-radius: 15px; border: 1px solid #333; box-shadow: 0 0 20px rgba(0,123,255,0.2); text-align: center; width: 90%; max-width: 380px; }
+        h2 { letter-spacing: 5px; color: #007bff; }
+        input { padding: 15px; width: 100%; margin-bottom: 20px; border: 1px solid #444; border-radius: 8px; background: #000; color: white; box-sizing: border-box; font-size: 16px; }
+        button { padding: 15px; width: 100%; background: #007bff; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #0056b3; box-shadow: 0 0 15px #007bff; }
+        #content { display: none; text-align: center; }
+        .error { color: #ff4444; font-size: 14px; margin-top: 15px; display: none; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div id="login-gate" class="login-box">
-        <h2>Sanka.co.za</h2>
-        <p>Please enter the access code:</p>
-        <input type="password" id="pass-field" placeholder="Password">
-        <br>
-        <button onclick="checkPass()">Enter Site</button>
-        <p id="error-msg" style="color:red; display:none;">Incorrect Password</p>
+        <h2>SANKA</h2>
+        <p style="color: #666; margin-bottom: 30px;">ENCRYPTED ACCESS ONLY</p>
+        <input type="password" id="pass-field" placeholder="ENTER ACCESS KEY">
+        <button onclick="validate()">AUTHORIZE</button>
+        <p id="error-msg" class="error">INVALID KEY - ACCESS DENIED</p>
     </div>
 
-    <div id="content" class="login-box">
-        <h1>Welcome to Sanka</h1>
-        <p>Store and Retailer content goes here.</p>
-        <button onclick="location.reload()">Logout</button>
+    <div id="content">
+        <h1>SANKA ONLINE STORE</h1>
+        <p>You have successfully bypassed the security gate.</p>
+        <hr style="border: 0.5px solid #333; width: 80%; margin: 20px auto;">
+        <p>Retailer Dashboard Coming Soon...</p>
+        <button onclick="location.reload()" style="background:#222; width: auto; padding: 10px 30px;">LOCK SESSION</button>
     </div>
 
     <script>
-        function checkPass() {
-            var password = document.getElementById("pass-field").value;
+        // This is the SHA-256 hash of "SANKA@2026"
+        const secureHash = "780098f98ec88b90f488667da7806f368f3a8b609c95d9715a13340578b88d2f";
+
+        async function validate() {
+            const input = document.getElementById("pass-field").value;
+            const msg = document.getElementById("error-msg");
             
-            // CHANGE YOUR PASSWORD HERE
-            if (password === "Sanka2026") { 
+            // Hash the user's input to compare it to our secureHash
+            const encoder = new TextEncoder();
+            const data = encoder.encode(input);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const inputHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+            if (inputHash === secureHash) {
                 document.getElementById("login-gate").style.display = "none";
                 document.getElementById("content").style.display = "block";
             } else {
-                document.getElementById("error-msg").style.display = "block";
+                msg.style.display = "block";
+                // Shake effect or clear field
+                document.getElementById("pass-field").value = "";
             }
         }
     </script>
-
 </body>
 </html>
