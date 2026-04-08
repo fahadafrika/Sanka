@@ -7,18 +7,18 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family: Arial,sans-serif; background:#f0f0f0; min-height:100vh; }
-
-#login-gate { display:flex; justify-content:center; align-items:center; min-height:100vh; }
-.login-box { background:white; padding:40px; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.1); text-align:center; width:320px; }
-.login-box h2 { margin-bottom:20px; color:#333; }
-#pass-field { width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; font-size:16px; margin-bottom:12px; outline:none; }
-#pass-field:focus { border-color:#555; }
-#login-btn { width:100%; padding:12px; background:#222; color:white; border:none; border-radius:8px; font-size:16px; cursor:pointer; }
-#login-btn:hover { background:#444; }
-#error-msg { display:none; color:red; margin-top:10px; font-size:14px; }
-#content { display:none; }
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:Arial,sans-serif;background:#f0f0f0;min-height:100vh;}
+#login-gate{display:flex;justify-content:center;align-items:center;min-height:100vh;}
+.login-box{background:white;padding:40px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.1);text-align:center;width:320px;}
+.login-box h2{margin-bottom:20px;color:#333;}
+#pass-field{width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;font-size:16px;margin-bottom:12px;outline:none;}
+#pass-field:focus{border-color:#555;}
+#login-btn{width:100%;padding:12px;background:#222;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer;}
+#login-btn:hover{background:#444;}
+#error-msg{display:none;color:red;margin-top:10px;font-size:14px;}
+#content{display:none;padding:20px;}
+button{cursor:pointer;}
 </style>
 </head>
 <body>
@@ -37,32 +37,33 @@ body { font-family: Arial,sans-serif; background:#f0f0f0; min-height:100vh; }
 </div>
 
 <script>
-// ─── PASSWORD GATE ─────────────────────────────
+// PASSWORD GATE
 const secureHash = "96ef6e4a01ac8a6b95e707616c8f4bddfb83b8975aa379f9ee0b73957fc7669a";
 
-async function validate() {
+async function validate(){
     const input = document.getElementById("pass-field").value.trim();
     const msg = document.getElementById("error-msg");
-    if (!input) return;
+    if(!input) return;
     const encoder = new TextEncoder();
     const data = encoder.encode(input);
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const inputHash = hashArray.map(b=>b.toString(16).padStart(2,'0')).join('');
-    if(inputHash===secureHash){
-        document.getElementById("login-gate").style.display="none";
-        document.getElementById("content").style.display="block";
+    if(inputHash === secureHash){
+        document.getElementById("login-gate").style.display = "none";
+        document.getElementById("content").style.display = "block";
         mountInventory();
     } else {
-        msg.style.display="block";
-        document.getElementById("pass-field").value="";
+        msg.style.display = "block";
+        document.getElementById("pass-field").value = "";
     }
 }
-document.getElementById("pass-field").addEventListener("keypress", e=>{
+
+document.getElementById("pass-field").addEventListener("keypress", function(e){
     if(e.key==="Enter") validate();
 });
 
-// ─── STORAGE ──────────────────────────────────
+// STORAGE
 const ITEMS_KEY = "sanka-inventory-v1";
 const FLAVORS_KEY = "sanka-flavors-v1";
 
@@ -73,98 +74,42 @@ function loadFlavors(){try{const r=localStorage.getItem(FLAVORS_KEY); return r?J
 function saveItems(v){localStorage.setItem(ITEMS_KEY,JSON.stringify(v))}
 function saveFlavors(v){localStorage.setItem(FLAVORS_KEY,JSON.stringify(v))}
 
-// ─── APP ─────────────────────────────────────
+// APP
 function mountInventory(){
     const { useState } = React;
     const e = React.createElement;
 
-    function Badge({children,color}) {
-        const styles={green:{background:"#d1fae5",color:"#065f46"},red:{background:"#fee2e2",color:"#991b1b"},orange:{background:"#ffedd5",color:"#9a3412"},gray:{background:"#f3f4f6",color:"#6b7280"}};
-        return e("span",{style:{...(styles[color]||styles.gray),padding:"2px 9px",borderRadius:999,fontSize:11,fontWeight:700,whiteSpace:"nowrap"}},children);
-    }
-
-    function Btn({onClick,style,children,title}){
-        return e("button",{onClick,title,style:{border:"none",borderRadius:8,width:34,height:34,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,...style}},children);
-    }
-
-    function FlavorManager({flavors,onClose,onSave}){
-        const [list,setList] = useState([...flavors]);
-        const [newFlavor,setNewFlavor]=useState("");
-        function add(){const trimmed=newFlavor.trim(); if(!trimmed||list.includes(trimmed)) return; setList([...list,trimmed]); setNewFlavor("");}
-        function remove(f){setList(list.filter(x=>x!==f))}
-        return e("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:300},onClick:ev=>{if(ev.target===ev.currentTarget)onClose();}},
-            e("div",{style:{background:"white",borderRadius:"20px 20px 0 0",padding:"24px 24px 40px",width:"100%",maxWidth:520,maxHeight:"80vh",overflowY:"auto"}},
-                e("div",{style:{fontWeight:800,fontSize:18,marginBottom:6,color:"#1a1a2e"}},"🎨 Manage Flavors"),
-                e("div",{style:{fontSize:13,color:"#888",marginBottom:20}},"These are available for all items. Add or remove as needed."),
-                e("div",{style:{display:"flex",gap:8,marginBottom:16}},
-                    e("input",{value:newFlavor,onChange:ev=>setNewFlavor(ev.target.value),onKeyDown:ev=>{if(ev.key==="Enter") add();},placeholder:"New flavor name...",style:{flex:1,padding:"10px 14px",borderRadius:10,border:"1.5px solid #e5e5e5",fontSize:14,outline:"none"}}),
-                    e("button",{onClick:add,style:{padding:"10px 18px",borderRadius:10,background:"#1a1a2e",color:"white",border:"none",fontWeight:700,cursor:"pointer"}},"Add")
-                ),
-                e("div",{style:{display:"flex",flexDirection:"column",gap:6,marginBottom:24}},
-                    list.map(f=>e("div",{key:f,style:{display:"flex",justifyContent:"space-between",alignItems:"center",background:"#f9f9f9",borderRadius:10,padding:"10px 14px"}},
-                        e("span",{style:{fontSize:14,fontWeight:600}},f),
-                        e("button",{onClick:()=>remove(f),style:{background:"#fee2e2",border:"none",borderRadius:7,padding:"4px 10px",color:"#991b1b",fontWeight:700,cursor:"pointer",fontSize:13}},"Remove")
-                    ))
-                ),
-                e("div",{style:{display:"flex",gap:10}},
-                    e("button",{onClick:onClose,style:{flex:1,padding:13,borderRadius:12,border:"1.5px solid #ddd",background:"white",fontSize:15,fontWeight:700,cursor:"pointer"}},"Cancel"),
-                    e("button",{onClick:()=>{onSave(list);onClose();},style:{flex:2,padding:13,borderRadius:12,border:"none",background:"#1a1a2e",color:"white",fontSize:15,fontWeight:800,cursor:"pointer"}},"Save Flavors")
-                )
-            )
-        );
-    }
-
-    // ── Inventory Root Component ─────────────────────────────
-    function App() {
+    function App(){
         const [items,setItems] = useState(loadItems());
         const [flavors,setFlavors] = useState(loadFlavors());
-        const [modal,setModal] = useState(null);
-        const [flavorModal,setFlavorModal] = useState(false);
-
-        function addItem(data){
-            const newItem = {...data,id:Date.now()};
-            const newItems = [...items,newItem];
-            setItems(newItems);
-            saveItems(newItems);
+        const [newItem,setNewItem] = useState({name:"",category:"",quantity:0,price:0});
+        
+        function addItem(){
+            if(!newItem.name) return alert("Name required");
+            const id = Date.now();
+            const updated = [...items,{...newItem,id}];
+            setItems(updated); saveItems(updated);
+            setNewItem({name:"",category:"",quantity:0,price:0});
         }
-
-        function editItem(id,data){
-            const newItems = items.map(it=>it.id===id?{...it,...data}:it);
-            setItems(newItems);
-            saveItems(newItems);
-        }
-
         function deleteItem(id){
             if(!confirm("Delete this item?")) return;
-            const newItems = items.filter(it=>it.id!==id);
-            setItems(newItems);
-            saveItems(newItems);
+            const updated = items.filter(it=>it.id!==id);
+            setItems(updated); saveItems(updated);
         }
 
-        return e("div",{style:{padding:20}},
+        return e("div",null,
             e("h1",null,"📦 Inventory"),
             e("div",{style:{marginBottom:12}},
-                e("button",{onClick:()=>setModal("add"),style:{padding:"8px 14px",borderRadius:8,border:"none",background:"#1a1a2e",color:"white",cursor:"pointer",fontWeight:700}},"Add Item "),
-                e("button",{onClick:()=>setFlavorModal(true),style:{padding:"8px 14px",borderRadius:8,border:"none",background:"#444",color:"white",cursor:"pointer",fontWeight:700,marginLeft:10}},"Manage Flavors")
+                e("input",{placeholder:"Name",value:newItem.name,onChange:e=>setNewItem({...newItem,name:e.target.value})}),
+                e("input",{placeholder:"Category",value:newItem.category,onChange:e=>setNewItem({...newItem,category:e.target.value})}),
+                e("input",{type:"number",placeholder:"Qty",value:newItem.quantity,onChange:e=>setNewItem({...newItem,quantity:Number(e.target.value)})}),
+                e("input",{type:"number",placeholder:"Price",value:newItem.price,onChange:e=>setNewItem({...newItem,price:Number(e.target.value)})}),
+                e("button",{onClick:addItem,style:{marginLeft:10,padding:"4px 10px"}}, "Add Item")
             ),
-            e("div",null,
-                items.map(it=>e("div",{key:it.id,style:{border:"1px solid #ddd",borderRadius:10,padding:12,marginBottom:8,background:"white",display:"flex",justifyContent:"space-between",alignItems:"center"}},
-                    e("div",null,
-                        e("div",{style:{fontWeight:700,fontSize:14}},it.name),
-                        e("div",{style:{fontSize:12,color:"#666"}},"Category: ",it.category||"—"),
-                        e("div",{style:{fontSize:12,color:"#666"}},"Qty: ",it.quantity||0),
-                        e("div",{style:{fontSize:12,color:"#666"}},"Price: ",it.price?`R ${it.price}`:"—")
-                    ),
-                    e("div",{style:{display:"flex",gap:6}},
-                        e(Btn,{onClick:()=>setModal({item:it}),children:"✏️",title:"Edit"}),
-                        e(Btn,{onClick:()=>deleteItem(it.id),children:"🗑️",title:"Delete"})
-                    )
-                ))
-            ),
-            modal && e(ItemModal,{modal,flavors,onClose:()=>setModal(null),onSubmit:modalData=>{
-                if(modal==="add") addItem(modalData); else editItem(modal.item.id,modalData);
-            }}),
-            flavorModal && e(FlavorManager,{flavors,onClose:()=>setFlavorModal(false),onSave:newList=>{setFlavors(newList); saveFlavors(newList);}})
+            items.map(it=>e("div",{key:it.id,style:{padding:10,border:"1px solid #ddd",borderRadius:6,marginBottom:6,display:"flex",justifyContent:"space-between"}},
+                e("div",null,`${it.name} - ${it.category} - Qty:${it.quantity} - R${it.price}`),
+                e("button",{onClick:()=>deleteItem(it.id)},"Delete")
+            ))
         );
     }
 
