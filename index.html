@@ -1,35 +1,31 @@
-    <script>
-        // Verified SHA-256 hash for "SANKA@2026"
-        const secureHash = "780098f98ec88b90f488667da7806f368f3a8b609c95d9715a13340578b88d2f";
+<script>
+    // Correct SHA-256 hash for "SANKA@2026"
+    const secureHash = "96ef6e4a01ac8a6b95e707616c8f4bddfb83b8975aa379f9ee0b73957fc7669a";
 
-        async function validate() {
-            // .trim() removes any accidental spaces at the start or end
-            const input = document.getElementById("pass-field").value.trim();
-            const msg = document.getElementById("error-msg");
-            
-            if (!input) return;
+    async function validate() {
+        const input = document.getElementById("pass-field").value.trim();
+        const msg = document.getElementById("error-msg");
 
-            const encoder = new TextEncoder();
-            const data = encoder.encode(input);
-            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            const inputHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        if (!input) return;
 
-            console.log("Input Hash:", inputHash); // For debugging if needed
+        const encoder = new TextEncoder();
+        const data = encoder.encode(input);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const inputHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
-            if (inputHash === secureHash) {
-                document.getElementById("login-gate").style.display = "none";
-                document.getElementById("content").style.display = "block";
-            } else {
-                msg.style.display = "block";
-                document.getElementById("pass-field").value = "";
-            }
+        if (inputHash === secureHash) {
+            document.getElementById("login-gate").style.display = "none";
+            document.getElementById("content").style.display = "block";
+        } else {
+            msg.style.display = "block";
+            document.getElementById("pass-field").value = "";
         }
-        
-        // This allows you to just press "Enter" on your keyboard/phone to login
-        document.getElementById("pass-field").addEventListener("keypress", function(event) {
-            if (event.key === "Enter") {
-                validate();
-            }
-        });
-    </script>
+    }
+
+    document.getElementById("pass-field").addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            validate();
+        }
+    });
+</script>
