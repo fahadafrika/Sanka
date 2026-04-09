@@ -8,40 +8,46 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; 
-            background: #f0f0f0; 
-            min-height: 100vh;
-            padding-top: env(safe-area-inset-top);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background: #0f0f13; color: white; min-height: 100vh;
             padding-bottom: env(safe-area-inset-bottom);
         }
 
+        /* LOGIN SCREEN */
         #login-gate {
             display: flex; justify-content: center; align-items: center; min-height: 100vh;
+            background: radial-gradient(circle at top, #1e1b4b 0%, #0f0f13 100%);
         }
         .login-box {
-            background: white; padding: 40px; border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; width: 90%; maxWidth: 340px;
+            background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(15px);
+            padding: 40px 30px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.1);
+            text-align: center; width: 90%; max-width: 350px; box-shadow: 0 25px 50px rgba(0,0,0,0.5);
         }
-        .login-box h2 { margin-bottom: 24px; color: #1a1a2e; font-weight: 800; }
+        .login-box h2 { margin: 15px 0; font-size: 24px; letter-spacing: -0.5px; }
         #pass-field {
-            width: 100%; padding: 14px; border: 1.5px solid #eee;
-            border-radius: 12px; font-size: 16px; margin-bottom: 12px;
-            outline: none; transition: border-color 0.2s;
+            width: 100%; padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(0,0,0,0.2); color: white; font-size: 16px; margin-bottom: 15px; outline: none;
         }
-        #pass-field:focus { border-color: #f59e0b; }
         #login-btn {
-            width: 100%; padding: 14px; background: #1a1a2e; color: white;
-            border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer;
+            width: 100%; padding: 15px; border-radius: 12px; border: none;
+            background: linear-gradient(135deg, #f59e0b, #ea580c); color: #000;
+            font-size: 16px; font-weight: 800; cursor: pointer;
         }
-        #error-msg { display: none; color: #ef4444; margin-top: 12px; font-size: 14px; font-weight: 600; }
+        #error-msg { display: none; color: #f87171; margin-top: 15px; font-size: 14px; font-weight: 600; }
+        
         #content { display: none; }
 
-        /* Mobile Fix: Prevents auto-zoom on inputs */
+        /* Dashboard Styles */
+        .header { background: #16161f; padding: 20px; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #2d2d39; }
+        .card { background: #1a1a24; border-radius: 16px; padding: 16px; margin-bottom: 12px; border: 1px solid #2d2d39; }
+        
+        /* Mobile Specific: Prevent Zoom */
         @media screen and (max-width: 768px) {
-            input, select, textarea { font-size: 16px !important; }
+            input { font-size: 16px !important; }
         }
     </style>
 </head>
@@ -49,11 +55,11 @@
 
 <div id="login-gate">
     <div class="login-box">
-        <div style="font-size: 40px; margin-bottom: 10px;">🛒</div>
+        <div style="font-size: 50px;">🛒</div>
         <h2>Sanka Stock</h2>
-        <input type="password" id="pass-field" placeholder="Access Password" />
-        <button id="login-btn" onclick="validate()">Enter Dashboard</button>
-        <p id="error-msg">❌ Incorrect password.</p>
+        <input type="password" id="pass-field" placeholder="Enter Password" autocomplete="current-password" />
+        <button id="login-btn" onclick="validate()">Access System</button>
+        <p id="error-msg">❌ Password Incorrect</p>
     </div>
 </div>
 
@@ -62,43 +68,39 @@
 </div>
 
 <script>
-// ─── FIREBASE CONFIG (Replace with your keys) ───────────────────────────
+// ─── CONFIGURATION ──────────────────────────────────────────────────
+// Replace the values below with your Firebase keys for multi-phone sync.
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "your-project.firebaseapp.com",
-  databaseURL: "https://your-project.firebaseio.com",
-  projectId: "your-project",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "...",
-  appId: "..."
+    apiKey: "YOUR_API_KEY",
+    authDomain: "your-project.firebaseapp.com",
+    databaseURL: "https://your-project.firebaseio.com",
+    projectId: "your-project",
+    storageBucket: "your-project.appspot.com",
+    messagingSenderId: "...",
+    appId: "..."
 };
 
-// Initialize only if keys are provided, else fallback to LocalStorage
-let db = null;
-try {
-    if(firebaseConfig.apiKey !== "YOUR_API_KEY") {
-        firebase.initializeApp(firebaseConfig);
-        db = firebase.database();
-    }
-} catch(e) { console.error("Firebase init failed", e); }
-
-// ─── PASSWORD GATE ─────────────────────────────────────────────────────
+// Password Fingerprint for: Sanka@4173
 const secureHash = "f94576304419965909241680673322040974768393e80931131154379a091428";
 
-
+// ─── LOGIN LOGIC ────────────────────────────────────────────────────
 async function validate() {
     const input = document.getElementById("pass-field").value.trim();
     const msg = document.getElementById("error-msg");
+    
+    if (!input) return;
+
+    // Create a SHA-256 hash of the input
     const encoder = new TextEncoder();
     const data = encoder.encode(input);
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const inputHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    
+
     if (inputHash === secureHash) {
         document.getElementById("login-gate").style.display = "none";
         document.getElementById("content").style.display = "block";
-        mountInventory();
+        startApp();
     } else {
         msg.style.display = "block";
         document.getElementById("pass-field").value = "";
@@ -109,85 +111,84 @@ document.getElementById("pass-field").addEventListener("keypress", (e) => {
     if (e.key === "Enter") validate();
 });
 
-// ─── STORAGE ────────────────────────────────────────────────────────────
-const ITEMS_KEY = "sanka-items";
-const FLAVORS_KEY = "sanka-flavors";
-const DEFAULT_FLAVORS = ["Durban Curry", "Chicken", "Beef", "Original", "Cheese", "Plain"];
-
-function loadItems() { return JSON.parse(localStorage.getItem(ITEMS_KEY)) || []; }
-function loadFlavors() { return JSON.parse(localStorage.getItem(FLAVORS_KEY)) || DEFAULT_FLAVORS; }
-function saveItems(v) { localStorage.setItem(ITEMS_KEY, JSON.stringify(v)); }
-function saveFlavors(v) { localStorage.setItem(FLAVORS_KEY, JSON.stringify(v)); }
-
-// ─── APP ENGINE ─────────────────────────────────────────────────────────
-function mountInventory() {
+// ─── APP LOGIC ──────────────────────────────────────────────────────
+function startApp() {
     const { useState, useEffect } = React;
     const e = React.createElement;
 
-    // Small Components
-    const Badge = ({ children, color }) => {
-        const colors = {
-            orange: { background: "#fff7ed", color: "#9a3412", border: "1px solid #fed7aa" },
-            red: { background: "#fef2f2", color: "#991b1b", border: "1px solid #fecaca" },
-            green: { background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0" }
-        };
-        return e("span", { style: { ...colors[color], padding: "2px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: "700" }}, children);
-    };
+    // Initialize Firebase if keys are set
+    let db = null;
+    if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+    }
 
     function App() {
-        const [items, setItems] = useState(loadItems());
-        const [flavors, setFlavors] = useState(loadFlavors());
-        const [search, setSearch] = useState("");
+        const [items, setItems] = useState([]);
+        const [loading, setLoading] = useState(true);
 
-        // If Firebase is active, use it
         useEffect(() => {
             if (db) {
-                db.ref('inventory').on('value', (snap) => setItems(snap.val() ? Object.values(snap.val()) : []));
-                db.ref('flavors').on('value', (snap) => setFlavors(snap.val() || DEFAULT_FLAVORS));
+                db.ref('inventory').on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    setItems(data ? Object.values(data) : []);
+                    setLoading(false);
+                });
+            } else {
+                const localData = JSON.parse(localStorage.getItem('sanka-stock') || '[]');
+                setItems(localData);
+                setLoading(false);
             }
         }, []);
 
-        const persistItems = (newItems) => {
-            setItems(newItems);
-            saveItems(newItems);
-            if (db) db.ref('inventory').set(newItems.reduce((acc, item) => ({...acc, [item.id]: item}), {}));
+        const save = (newList) => {
+            setItems(newList);
+            localStorage.setItem('sanka-stock', JSON.stringify(newList));
+            if (db) {
+                const updates = {};
+                newList.forEach(item => updates[item.id] = item);
+                db.ref('inventory').set(updates);
+            }
         };
 
-        const filtered = items.filter(i => i.name.toLowerCase().includes(search.toLowerCase()));
+        const addItem = () => {
+            const name = prompt("Enter Item Name:");
+            if (name) {
+                const newItem = { id: Date.now(), name, quantity: 0 };
+                save([...items, newItem]);
+            }
+        };
 
-        return e("div", { style: { maxWidth: "600px", margin: "0 auto", padding: "20px" }},
-            e("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }},
-                e("h1", { style: { fontSize: "24px" }}, "Stock Control"),
-                e("button", { 
-                    onClick: () => {
-                        const name = prompt("Item Name:");
-                        if(name) persistItems([...items, { id: Date.now(), name, quantity: 0, outOfStock: false }]);
-                    },
-                    style: { background: "#f59e0b", border: "none", padding: "10px 15px", borderRadius: "10px", fontWeight: "700" }
-                }, "+ Add")
+        const updateQty = (id, change) => {
+            const newList = items.map(item => {
+                if (item.id === id) {
+                    return { ...item, quantity: Math.max(0, item.quantity + change) };
+                }
+                return item;
+            });
+            save(newList);
+        };
+
+        return e("div", null, 
+            e("div", { className: "header" },
+                e("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", maxWidth: "600px", margin: "0 auto" }},
+                    e("h2", null, "Stock Control"),
+                    e("button", { onClick: addItem, style: { background: "#f59e0b", border: "none", padding: "10px 20px", borderRadius: "10px", fontWeight: "800" }}, "+ Add")
+                )
             ),
-            e("input", { 
-                placeholder: "Search items...", 
-                value: search, 
-                onChange: (ev) => setSearch(ev.target.value),
-                style: { width: "100%", padding: "12px", borderRadius: "12px", border: "1.5px solid #ddd", marginBottom: "20px", outline: "none" }
-            }),
-            e("div", { style: { display: "flex", flexDirection: "column", gap: "10px" }},
-                filtered.map(item => e("div", { 
-                    key: item.id, 
-                    style: { background: "white", padding: "15px", borderRadius: "15px", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 2px 5px rgba(0,0,0,0.05)" }
-                },
-                    e("div", null,
-                        e("div", { style: { fontWeight: "700" }}, item.name),
-                        e("div", { style: { fontSize: "13px", color: "#666" }}, `Qty: ${item.quantity}`)
-                    ),
-                    e("button", {
-                        onClick: () => {
-                            const newQty = prompt("Enter new quantity:", item.quantity);
-                            if(newQty !== null) persistItems(items.map(i => i.id === item.id ? {...i, quantity: parseInt(newQty)} : i));
-                        },
-                        style: { background: "#eee", border: "none", padding: "8px 12px", borderRadius: "8px" }
-                    }, "Edit")
+            e("div", { style: { padding: "20px", maxWidth: "600px", margin: "0 auto" }},
+                items.length === 0 ? e("p", { style: { color: "#666", textAlign: "center", marginTop: "40px" }}, "No items yet. Tap + Add to start.") :
+                items.map(item => e("div", { key: item.id, className: "card" },
+                    e("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" }},
+                        e("div", null,
+                            e("div", { style: { fontWeight: "700", fontSize: "18px" }}, item.name),
+                            e("div", { style: { color: "#f59e0b", fontSize: "20px", fontWeight: "900", marginTop: "5px" }}, `Qty: ${item.quantity}`)
+                        ),
+                        e("div", { style: { display: "flex", gap: "10px" }},
+                            e("button", { onClick: () => updateQty(item.id, -1), style: { width: "45px", height: "45px", borderRadius: "10px", border: "none", background: "#333", color: "white", fontSize: "20px" }}, "-"),
+                            e("button", { onClick: () => updateQty(item.id, 1), style: { width: "45px", height: "45px", borderRadius: "10px", border: "none", background: "#f59e0b", color: "#000", fontSize: "20px" }}, "+")
+                        )
+                    )
                 ))
             )
         );
