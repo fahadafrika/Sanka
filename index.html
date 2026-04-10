@@ -7,15 +7,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', Arial, sans-serif; background: #0f0f13; min-height: 100vh; }
 
-        /* ── LOGIN ── */
         #login-gate {
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            display: flex; justify-content: center; align-items: center;
             min-height: 100vh;
             background: radial-gradient(ellipse at 50% 0%, #1e1b4b 0%, #0f0f13 70%);
         }
@@ -23,10 +23,8 @@
             background: rgba(255,255,255,0.04);
             border: 1px solid rgba(255,255,255,0.1);
             backdrop-filter: blur(20px);
-            padding: 48px 40px;
-            border-radius: 24px;
-            text-align: center;
-            width: 340px;
+            padding: 48px 40px; border-radius: 24px;
+            text-align: center; width: 340px;
             box-shadow: 0 32px 80px rgba(0,0,0,0.5);
         }
         .login-logo {
@@ -34,22 +32,11 @@
             background: linear-gradient(135deg, #f59e0b, #ef4444);
             border-radius: 16px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 26px;
-            margin: 0 auto 20px;
+            font-size: 26px; margin: 0 auto 20px;
             box-shadow: 0 8px 24px rgba(245,158,11,0.3);
         }
-        .login-box h2 {
-            color: white;
-            font-size: 22px;
-            font-weight: 800;
-            margin-bottom: 6px;
-            letter-spacing: -0.5px;
-        }
-        .login-subtitle {
-            color: rgba(255,255,255,0.4);
-            font-size: 13px;
-            margin-bottom: 28px;
-        }
+        .login-box h2 { color: white; font-size: 22px; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.5px; }
+        .login-subtitle { color: rgba(255,255,255,0.4); font-size: 13px; margin-bottom: 28px; }
         #pass-field {
             width: 100%; padding: 14px 16px;
             background: rgba(255,255,255,0.07);
@@ -73,11 +60,18 @@
         }
         #login-btn:hover { opacity: 0.92; transform: translateY(-1px); }
         #login-btn:active { transform: translateY(0); }
+        .view-only-btn {
+            width: 100%; padding: 12px; margin-top: 10px;
+            background: transparent;
+            color: rgba(255,255,255,0.45);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px; font-size: 14px; font-weight: 600;
+            cursor: pointer; font-family: 'Inter', Arial, sans-serif;
+            transition: all 0.2s;
+        }
+        .view-only-btn:hover { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.65); }
         #error-msg { display: none; color: #f87171; margin-top: 12px; font-size: 13px; font-weight: 500; }
-
         #content { display: none; }
-
-        /* ── SCROLLBAR ── */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
@@ -90,8 +84,9 @@
         <div class="login-logo">🛒</div>
         <h2>Sanka Stock</h2>
         <p class="login-subtitle">Inventory Management</p>
-        <input type="password" id="pass-field" placeholder="Enter access password" />
-        <button id="login-btn">Access Dashboard</button>
+        <input type="password" id="pass-field" placeholder="Staff password to edit" />
+        <button id="login-btn">Edit Dashboard</button>
+        <button class="view-only-btn" id="view-btn">👁 View Stock Only</button>
         <p id="error-msg">❌ Incorrect password. Try again.</p>
     </div>
 </div>
@@ -101,429 +96,258 @@
 </div>
 
 <script>
-// ─── PASSWORD GATE ──────────────────────────────────────────────────────────
+// ─── FIREBASE SETUP ───────────────────────────────────────────────────────────
+firebase.initializeApp({
+    databaseURL: "https://sanka-stock-default-rtdb.firebaseio.com"
+});
+const db = firebase.database();
+
+// ─── PASSWORD GATE ────────────────────────────────────────────────────────────
 const SECURE_HASH = "d92d0652aad7fad980ec195f529f5500012a6bb12f724a5c3a7b180c80d6cda6";
+let isEditor = false;
 
 async function validate() {
     const input = document.getElementById("pass-field").value.trim();
     const errMsg = document.getElementById("error-msg");
     if (!input) return;
-
     const encoded = new TextEncoder().encode(input);
     const hashBuffer = await crypto.subtle.digest("SHA-256", encoded);
     const inputHash = Array.from(new Uint8Array(hashBuffer))
         .map(b => b.toString(16).padStart(2, "0")).join("");
-
     if (inputHash === SECURE_HASH) {
-        document.getElementById("login-gate").style.display = "none";
-        document.getElementById("content").style.display = "block";
-        mountInventory();
+        isEditor = true;
+        launchApp();
     } else {
         errMsg.style.display = "block";
         document.getElementById("pass-field").value = "";
     }
 }
 
+function launchApp() {
+    document.getElementById("login-gate").style.display = "none";
+    document.getElementById("content").style.display = "block";
+    mountInventory(isEditor);
+}
+
 document.getElementById("login-btn").addEventListener("click", validate);
-document.getElementById("pass-field").addEventListener("keypress", e => {
-    if (e.key === "Enter") validate();
-});
+document.getElementById("view-btn").addEventListener("click", () => { isEditor = false; launchApp(); });
+document.getElementById("pass-field").addEventListener("keypress", e => { if (e.key === "Enter") validate(); });
 
-// ─── STORAGE ────────────────────────────────────────────────────────────────
-const ITEMS_KEY   = "sanka-inventory-v1";
-const FLAVORS_KEY = "sanka-flavors-v1";
-
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const DEFAULT_FLAVORS = [
-    "Durban Curry", "Chicken", "Beef", "Original", "Cheese",
-    "BBQ", "Tomato", "Spicy", "Plain", "Strawberry",
-    "Bubblegum", "Cola", "Lemon", "Grape", "Watermelon"
+    "Durban Curry","Chicken","Beef","Original","Cheese",
+    "BBQ","Tomato","Spicy","Plain","Strawberry",
+    "Bubblegum","Cola","Lemon","Grape","Watermelon"
 ];
 
-function loadItems()    { try { const r = localStorage.getItem(ITEMS_KEY);   return r ? JSON.parse(r) : []; }              catch { return []; } }
-function loadFlavors()  { try { const r = localStorage.getItem(FLAVORS_KEY); return r ? JSON.parse(r) : DEFAULT_FLAVORS; } catch { return DEFAULT_FLAVORS; } }
-function saveItems(v)   { localStorage.setItem(ITEMS_KEY,   JSON.stringify(v)); }
-function saveFlavors(v) { localStorage.setItem(FLAVORS_KEY, JSON.stringify(v)); }
-
-// ─── SHARED STYLES ──────────────────────────────────────────────────────────
 const S = {
     card:      { background: "#1a1a24", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, overflow: "hidden" },
     cardWarn:  { background: "#1e1015", border: "1px solid rgba(239,68,68,0.25)",   borderRadius: 16, overflow: "hidden" },
     cardPrice: { background: "#1a1a10", border: "1px solid rgba(253,211,77,0.2)",   borderRadius: 16, overflow: "hidden" },
-    input:     { width: "100%", padding: "11px 14px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", fontSize: 14, outline: "none", boxSizing: "border-box", background: "rgba(255,255,255,0.05)", color: "white", fontFamily: "'Inter', Arial, sans-serif" },
-    label:     { fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.4)", display: "block", marginBottom: 5, letterSpacing: "0.06em", textTransform: "uppercase" },
+    input:     { width:"100%", padding:"11px 14px", borderRadius:10, border:"1px solid rgba(255,255,255,0.1)", fontSize:14, outline:"none", boxSizing:"border-box", background:"rgba(255,255,255,0.05)", color:"white", fontFamily:"'Inter',Arial,sans-serif" },
+    label:     { fontSize:11, fontWeight:700, color:"rgba(255,255,255,0.4)", display:"block", marginBottom:5, letterSpacing:"0.06em", textTransform:"uppercase" },
 };
 
-// ─── MOUNT ───────────────────────────────────────────────────────────────────
-function mountInventory() {
-    const { useState } = React;
+// ─── MOUNT ────────────────────────────────────────────────────────────────────
+function mountInventory(canEdit) {
+    const { useState, useEffect } = React;
     const e = React.createElement;
 
-    // ── BADGE ──────────────────────────────────────────────────────────────
     function Badge({ children, color }) {
-        const palette = {
-            green:  { background: "rgba(16,185,129,0.15)",  color: "#34d399", border: "1px solid rgba(16,185,129,0.2)" },
-            red:    { background: "rgba(239,68,68,0.15)",   color: "#f87171", border: "1px solid rgba(239,68,68,0.2)" },
-            orange: { background: "rgba(245,158,11,0.15)",  color: "#fbbf24", border: "1px solid rgba(245,158,11,0.2)" },
-            indigo: { background: "rgba(99,102,241,0.15)",  color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.2)" },
+        const p = {
+            green:  { background:"rgba(16,185,129,0.15)", color:"#34d399", border:"1px solid rgba(16,185,129,0.2)" },
+            red:    { background:"rgba(239,68,68,0.15)",  color:"#f87171", border:"1px solid rgba(239,68,68,0.2)" },
+            orange: { background:"rgba(245,158,11,0.15)", color:"#fbbf24", border:"1px solid rgba(245,158,11,0.2)" },
+            indigo: { background:"rgba(99,102,241,0.15)", color:"#a5b4fc", border:"1px solid rgba(99,102,241,0.2)" },
         };
-        return e("span", {
-            style: { ...(palette[color] || palette.indigo), padding: "2px 9px", borderRadius: 999, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }
-        }, children);
+        return e("span", { style:{ ...(p[color]||p.indigo), padding:"2px 9px", borderRadius:999, fontSize:11, fontWeight:700, whiteSpace:"nowrap" }}, children);
     }
 
-    // ── ICON BUTTON ────────────────────────────────────────────────────────
     function Btn({ onClick, style, children, title }) {
-        return e("button", {
-            onClick, title,
-            style: { border: "none", borderRadius: 9, width: 32, height: 32, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "opacity 0.15s", ...style }
-        }, children);
+        return e("button", { onClick, title, style:{ border:"none", borderRadius:9, width:32, height:32, cursor:"pointer", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, ...style }}, children);
     }
 
-    // ── INPUT FIELD ────────────────────────────────────────────────────────
-    function InputField({ label, value, onChange, placeholder, type = "text", prefix }) {
-        return e("div", { style: { marginBottom: 14 } },
-            e("label", { style: S.label }, label),
-            e("div", { style: { position: "relative" } },
-                prefix && e("span", {
-                    style: { position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,0.3)", fontSize: 13, fontWeight: 600 }
-                }, prefix),
-                e("input", { type, value, onChange, placeholder, style: { ...S.input, paddingLeft: prefix ? 28 : 14 } })
+    function InputField({ label, value, onChange, placeholder, type="text", prefix }) {
+        return e("div", { style:{ marginBottom:14 }},
+            e("label", { style:S.label }, label),
+            e("div", { style:{ position:"relative" }},
+                prefix && e("span", { style:{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", color:"rgba(255,255,255,0.3)", fontSize:13, fontWeight:600 }}, prefix),
+                e("input", { type, value, onChange, placeholder, style:{ ...S.input, paddingLeft: prefix ? 28 : 14 }})
             )
         );
     }
 
-    // ── FLAVOR MANAGER ─────────────────────────────────────────────────────
+    // ── FLAVOR MANAGER ───────────────────────────────────────────────────────
     function FlavorManager({ flavors, onClose, onSave }) {
-        const [list,      setList]      = useState([...flavors]);
-        const [newFlavor, setNewFlavor] = useState("");
-        const [search,    setSearch]    = useState("");           // ← NEW: search state
-
+        const [list, setList]         = useState([...flavors]);
+        const [newFlavor, setNew]     = useState("");
+        const [search, setSearch]     = useState("");
         const filtered = list.filter(f => f.toLowerCase().includes(search.toLowerCase()));
 
         function add() {
-            const trimmed = newFlavor.trim();
-            if (!trimmed) return;
-            if (list.map(f => f.toLowerCase()).includes(trimmed.toLowerCase())) {
-                setNewFlavor("");
-                return;
-            }
-            setList([...list, trimmed]);
-            setNewFlavor("");
+            const t = newFlavor.trim();
+            if (!t || list.map(f=>f.toLowerCase()).includes(t.toLowerCase())) { setNew(""); return; }
+            setList([...list, t]); setNew("");
         }
 
-        return e("div", {
-            style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 300, backdropFilter: "blur(4px)" },
-            onClick: ev => { if (ev.target === ev.currentTarget) onClose(); }
-        },
-            e("div", {
-                style: { background: "#16161f", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "24px 24px 0 0", padding: "28px 24px 48px", width: "100%", maxWidth: 520, maxHeight: "80vh", overflowY: "auto" }
-            },
-                // drag handle
-                e("div", { style: { width: 36, height: 4, background: "rgba(255,255,255,0.15)", borderRadius: 2, margin: "0 auto 24px" } }),
+        return e("div", { style:{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", display:"flex", alignItems:"flex-end", justifyContent:"center", zIndex:300, backdropFilter:"blur(4px)" }, onClick: ev => { if(ev.target===ev.currentTarget) onClose(); }},
+            e("div", { style:{ background:"#16161f", border:"1px solid rgba(255,255,255,0.1)", borderRadius:"24px 24px 0 0", padding:"28px 24px 48px", width:"100%", maxWidth:520, maxHeight:"80vh", overflowY:"auto" }},
+                e("div", { style:{ width:36, height:4, background:"rgba(255,255,255,0.15)", borderRadius:2, margin:"0 auto 24px" }}),
+                e("div", { style:{ fontWeight:800, fontSize:18, marginBottom:6, color:"white" }}, "🎨 Manage Flavors"),
+                e("div", { style:{ fontSize:13, color:"rgba(255,255,255,0.4)", marginBottom:20 }}, "Add or remove flavors across all items."),
 
-                // title
-                e("div", { style: { fontWeight: 800, fontSize: 18, marginBottom: 6, color: "white" } }, "🎨 Manage Flavors"),
-                e("div", { style: { fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: 24 } }, "Available across all items. Add or remove as needed."),
-
-                // add new flavor
-                e("div", { style: { display: "flex", gap: 8, marginBottom: 12 } },
-                    e("input", {
-                        value: newFlavor,
-                        onChange: ev => setNewFlavor(ev.target.value),
-                        onKeyDown: ev => { if (ev.key === "Enter") add(); },
-                        placeholder: "New flavor name...",
-                        style: { ...S.input, flex: 1 }
-                    }),
-                    e("button", {
-                        onClick: add,
-                        style: { padding: "11px 18px", borderRadius: 10, background: "linear-gradient(135deg,#f59e0b,#f97316)", color: "#1a1a2e", border: "none", fontWeight: 800, cursor: "pointer", fontSize: 13, whiteSpace: "nowrap" }
-                    }, "Add")
+                e("div", { style:{ display:"flex", gap:8, marginBottom:12 }},
+                    e("input", { value:newFlavor, onChange:ev=>setNew(ev.target.value), onKeyDown:ev=>{ if(ev.key==="Enter") add(); }, placeholder:"New flavor name...", style:{ ...S.input, flex:1 }}),
+                    e("button", { onClick:add, style:{ padding:"11px 18px", borderRadius:10, background:"linear-gradient(135deg,#f59e0b,#f97316)", color:"#1a1a2e", border:"none", fontWeight:800, cursor:"pointer", fontSize:13 }}, "Add")
                 ),
-
-                // ── SEARCH BAR FOR FLAVORS (NEW) ──────────────────────────
-                e("div", { style: { position: "relative", marginBottom: 14 } },
-                    e("span", { style: { position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, pointerEvents: "none" } }, "🔍"),
-                    e("input", {
-                        value: search,
-                        onChange: ev => setSearch(ev.target.value),
-                        placeholder: "Search flavors...",
-                        style: { ...S.input, paddingLeft: 36 }
-                    })
+                e("div", { style:{ position:"relative", marginBottom:10 }},
+                    e("span", { style:{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", fontSize:14, pointerEvents:"none" }}, "🔍"),
+                    e("input", { value:search, onChange:ev=>setSearch(ev.target.value), placeholder:"Search flavors...", style:{ ...S.input, paddingLeft:36 }})
                 ),
-
-                // count label
-                e("div", { style: { fontSize: 11, color: "rgba(255,255,255,0.3)", fontWeight: 600, marginBottom: 10 } },
-                    filtered.length === list.length
-                        ? `${list.length} flavor${list.length !== 1 ? "s" : ""}`
-                        : `${filtered.length} of ${list.length} flavors`
+                e("div", { style:{ fontSize:11, color:"rgba(255,255,255,0.3)", fontWeight:600, marginBottom:10 }},
+                    filtered.length===list.length ? `${list.length} flavor${list.length!==1?"s":""}` : `${filtered.length} of ${list.length} flavors`
                 ),
-
-                // flavor list
-                e("div", { style: { display: "flex", flexDirection: "column", gap: 6, marginBottom: 28 } },
-                    filtered.length === 0
-                        ? e("div", { style: { textAlign: "center", padding: "24px 0", color: "rgba(255,255,255,0.2)", fontSize: 13 } }, "No flavors match your search")
-                        : filtered.map(f =>
-                            e("div", {
-                                key: f,
-                                style: { display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "10px 14px" }
-                            },
-                                e("span", { style: { fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.85)" } }, f),
-                                e("button", {
-                                    onClick: () => setList(list.filter(x => x !== f)),
-                                    style: { background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 7, padding: "4px 12px", color: "#f87171", fontWeight: 700, cursor: "pointer", fontSize: 12 }
-                                }, "Remove")
-                            )
-                        )
+                e("div", { style:{ display:"flex", flexDirection:"column", gap:6, marginBottom:28 }},
+                    filtered.length===0
+                        ? e("div", { style:{ textAlign:"center", padding:"20px 0", color:"rgba(255,255,255,0.2)", fontSize:13 }}, "No flavors match")
+                        : filtered.map(f => e("div", { key:f, style:{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:10, padding:"10px 14px" }},
+                            e("span", { style:{ fontSize:14, fontWeight:600, color:"rgba(255,255,255,0.85)" }}, f),
+                            e("button", { onClick:()=>setList(list.filter(x=>x!==f)), style:{ background:"rgba(239,68,68,0.15)", border:"1px solid rgba(239,68,68,0.2)", borderRadius:7, padding:"4px 12px", color:"#f87171", fontWeight:700, cursor:"pointer", fontSize:12 }}, "Remove")
+                        ))
                 ),
-
-                // action buttons
-                e("div", { style: { display: "flex", gap: 10 } },
-                    e("button", {
-                        onClick: onClose,
-                        style: { flex: 1, padding: 14, borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", fontSize: 14, fontWeight: 700, cursor: "pointer", color: "rgba(255,255,255,0.6)" }
-                    }, "Cancel"),
-                    e("button", {
-                        onClick: () => { onSave(list); onClose(); },
-                        style: { flex: 2, padding: 14, borderRadius: 12, border: "none", background: "linear-gradient(135deg,#f59e0b,#f97316)", fontSize: 14, fontWeight: 800, cursor: "pointer", color: "#1a1a2e" }
-                    }, "Save Flavors")
+                e("div", { style:{ display:"flex", gap:10 }},
+                    e("button", { onClick:onClose, style:{ flex:1, padding:14, borderRadius:12, border:"1px solid rgba(255,255,255,0.1)", background:"transparent", fontSize:14, fontWeight:700, cursor:"pointer", color:"rgba(255,255,255,0.6)" }}, "Cancel"),
+                    e("button", { onClick:()=>{ onSave(list); onClose(); }, style:{ flex:2, padding:14, borderRadius:12, border:"none", background:"linear-gradient(135deg,#f59e0b,#f97316)", fontSize:14, fontWeight:800, cursor:"pointer", color:"#1a1a2e" }}, "Save Flavors")
                 )
             )
         );
     }
 
-    // ── ITEM MODAL ─────────────────────────────────────────────────────────
+    // ── ITEM MODAL ───────────────────────────────────────────────────────────
     function ItemModal({ modal, flavors, onClose, onSubmit }) {
         const isAdd = modal === "add";
-
         const [form, setForm] = useState(isAdd
-            ? { name: "", category: "", quantity: "", sellPrice: "", costPrice: "", priceUp: false, flavors: [] }
-            : {
-                name:      modal.item.name,
-                category:  modal.item.category  || "",
-                quantity:  String(modal.item.quantity),
-                sellPrice: modal.item.sellPrice  != null ? String(modal.item.sellPrice) : "",
-                costPrice: modal.item.costPrice  != null ? String(modal.item.costPrice) : "",
-                priceUp:   modal.item.priceUp    || false,
-                flavors:   modal.item.flavors    ? modal.item.flavors.map(f => ({ ...f })) : [],
-            }
+            ? { name:"", category:"", quantity:"", sellPrice:"", costPrice:"", priceUp:false, flavors:[] }
+            : { name:modal.item.name, category:modal.item.category||"", quantity:String(modal.item.quantity), sellPrice:modal.item.sellPrice!=null?String(modal.item.sellPrice):"", costPrice:modal.item.costPrice!=null?String(modal.item.costPrice):"", priceUp:modal.item.priceUp||false, flavors:modal.item.flavors?modal.item.flavors.map(f=>({...f})):[] }
         );
-
         const [flavorSearch, setFlavorSearch] = useState("");
-
-        // computed profit margin
-        const sellF = parseFloat(form.sellPrice);
-        const costF = parseFloat(form.costPrice);
-        const margin = (sellF && costF) ? ((sellF - costF) / sellF * 100).toFixed(1) : null;
+        const sellF = parseFloat(form.sellPrice), costF = parseFloat(form.costPrice);
+        const margin = (sellF && costF) ? ((sellF-costF)/sellF*100).toFixed(1) : null;
+        const selectedNames  = form.flavors.map(f=>f.name);
+        const visibleFlavors = flavors.filter(f=>f.toLowerCase().includes(flavorSearch.toLowerCase()));
 
         function toggleFlavor(name) {
-            const exists = form.flavors.find(f => f.name === name);
-            setForm({
-                ...form,
-                flavors: exists
-                    ? form.flavors.filter(f => f.name !== name)
-                    : [...form.flavors, { name, quantity: 0, outOfStock: false }]
-            });
+            const exists = form.flavors.find(f=>f.name===name);
+            setForm({ ...form, flavors: exists ? form.flavors.filter(f=>f.name!==name) : [...form.flavors,{name,quantity:0,outOfStock:false}] });
         }
-
         function setFlavorQty(name, val) {
-            const qty = Math.max(0, parseInt(val) || 0);
-            setForm({
-                ...form,
-                flavors: form.flavors.map(f =>
-                    f.name === name ? { ...f, quantity: qty, outOfStock: qty === 0 } : f
-                )
-            });
+            const qty = Math.max(0, parseInt(val)||0);
+            setForm({ ...form, flavors: form.flavors.map(f=>f.name===name?{...f,quantity:qty,outOfStock:qty===0}:f) });
         }
-
         function toggleFlavorStock(name) {
-            setForm({
-                ...form,
-                flavors: form.flavors.map(f =>
-                    f.name === name ? { ...f, outOfStock: !f.outOfStock, quantity: !f.outOfStock ? 0 : f.quantity } : f
-                )
-            });
+            setForm({ ...form, flavors: form.flavors.map(f=>f.name===name?{...f,outOfStock:!f.outOfStock,quantity:!f.outOfStock?0:f.quantity}:f) });
         }
 
-        const selectedNames   = form.flavors.map(f => f.name);
-        const visibleFlavors  = flavors.filter(f => f.toLowerCase().includes(flavorSearch.toLowerCase()));
+        return e("div", { style:{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", display:"flex", alignItems:"flex-end", justifyContent:"center", zIndex:200, backdropFilter:"blur(4px)" }, onClick:ev=>{ if(ev.target===ev.currentTarget) onClose(); }},
+            e("div", { style:{ background:"#16161f", border:"1px solid rgba(255,255,255,0.1)", borderRadius:"24px 24px 0 0", padding:"28px 24px 48px", width:"100%", maxWidth:520, maxHeight:"94vh", overflowY:"auto" }},
+                e("div", { style:{ width:36, height:4, background:"rgba(255,255,255,0.15)", borderRadius:2, margin:"0 auto 24px" }}),
+                e("div", { style:{ fontWeight:800, fontSize:18, marginBottom:24, color:"white" }}, isAdd?"➕ Add New Item":"✏️ Edit Item"),
 
-        return e("div", {
-            style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 200, backdropFilter: "blur(4px)" },
-            onClick: ev => { if (ev.target === ev.currentTarget) onClose(); }
-        },
-            e("div", {
-                style: { background: "#16161f", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "24px 24px 0 0", padding: "28px 24px 48px", width: "100%", maxWidth: 520, maxHeight: "94vh", overflowY: "auto" }
-            },
-                // drag handle
-                e("div", { style: { width: 36, height: 4, background: "rgba(255,255,255,0.15)", borderRadius: 2, margin: "0 auto 24px" } }),
+                e(InputField,{ label:"Item Name *", value:form.name, onChange:ev=>setForm({...form,name:ev.target.value}), placeholder:"e.g. Maggi Noodles" }),
+                e(InputField,{ label:"Category", value:form.category, onChange:ev=>setForm({...form,category:ev.target.value}), placeholder:"e.g. Noodles, Sweets, Chips" }),
+                e(InputField,{ label:"Total Quantity", value:form.quantity, onChange:ev=>setForm({...form,quantity:ev.target.value}), placeholder:"0", type:"number" }),
 
-                e("div", { style: { fontWeight: 800, fontSize: 18, marginBottom: 24, color: "white" } },
-                    isAdd ? "➕ Add New Item" : "✏️ Edit Item"
+                e("div", { style:{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }},
+                    e("div",null, e("label",{style:S.label},"Selling Price"), e("div",{style:{position:"relative"}}, e("span",{style:{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:"rgba(255,255,255,0.3)",fontSize:13,fontWeight:600}},"R"), e("input",{type:"number",value:form.sellPrice,onChange:ev=>setForm({...form,sellPrice:ev.target.value}),placeholder:"0.00",style:{...S.input,paddingLeft:26}}))),
+                    e("div",null, e("label",{style:S.label},"Cost Price"), e("div",{style:{position:"relative"}}, e("span",{style:{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:"rgba(255,255,255,0.3)",fontSize:13,fontWeight:600}},"R"), e("input",{type:"number",value:form.costPrice,onChange:ev=>setForm({...form,costPrice:ev.target.value}),placeholder:"0.00",style:{...S.input,paddingLeft:26}})))
                 ),
 
-                // name / category / quantity
-                e(InputField, { label: "Item Name *",    value: form.name,     onChange: ev => setForm({ ...form, name:     ev.target.value }), placeholder: "e.g. Maggi Noodles" }),
-                e(InputField, { label: "Category",       value: form.category, onChange: ev => setForm({ ...form, category: ev.target.value }), placeholder: "e.g. Noodles, Sweets, Chips" }),
-                e(InputField, { label: "Total Quantity", value: form.quantity, onChange: ev => setForm({ ...form, quantity: ev.target.value }), placeholder: "0", type: "number" }),
+                margin!==null && e("div",{style:{background:parseFloat(margin)>=20?"rgba(16,185,129,0.1)":"rgba(245,158,11,0.1)",border:`1px solid ${parseFloat(margin)>=20?"rgba(16,185,129,0.2)":"rgba(245,158,11,0.2)"}`,borderRadius:10,padding:"10px 14px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center"}},
+                    e("span",{style:{fontSize:12,color:"rgba(255,255,255,0.5)",fontWeight:600}},"Profit Margin"),
+                    e("span",{style:{fontSize:14,fontWeight:800,color:parseFloat(margin)>=20?"#34d399":"#fbbf24"}},margin+"%")
+                ),
 
-                // price row
-                e("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 } },
-                    e("div", null,
-                        e("label", { style: S.label }, "Selling Price"),
-                        e("div", { style: { position: "relative" } },
-                            e("span", { style: { position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,0.3)", fontSize: 13, fontWeight: 600 } }, "R"),
-                            e("input", { type: "number", value: form.sellPrice, onChange: ev => setForm({ ...form, sellPrice: ev.target.value }), placeholder: "0.00", style: { ...S.input, paddingLeft: 26 } })
+                e("div",{onClick:()=>setForm({...form,priceUp:!form.priceUp}),style:{display:"flex",alignItems:"center",gap:14,background:form.priceUp?"rgba(245,158,11,0.08)":"rgba(255,255,255,0.03)",border:`1px solid ${form.priceUp?"rgba(245,158,11,0.3)":"rgba(255,255,255,0.08)"}`,borderRadius:12,padding:"13px 16px",marginBottom:22,cursor:"pointer"}},
+                    e("div",{style:{width:42,height:24,borderRadius:12,background:form.priceUp?"#f59e0b":"rgba(255,255,255,0.1)",position:"relative",flexShrink:0,transition:"background 0.2s"}},
+                        e("div",{style:{position:"absolute",top:3,left:form.priceUp?21:3,width:18,height:18,borderRadius:"50%",background:"white",transition:"left 0.2s",boxShadow:"0 1px 4px rgba(0,0,0,0.3)"}})
+                    ),
+                    e("div",null, e("div",{style:{fontWeight:700,fontSize:14,color:"white"}},"Price Increased"), e("div",{style:{fontSize:12,color:"rgba(255,255,255,0.4)"}},"Flag this item's price went up"))
+                ),
+
+                e("div",{style:{marginBottom:24}},
+                    e("div",{style:{fontWeight:700,fontSize:13,color:"rgba(255,255,255,0.6)",marginBottom:12,letterSpacing:"0.06em",textTransform:"uppercase"}},"🎨 Flavors / Variants"),
+                    form.flavors.length>0 && e("div",{style:{marginBottom:12}},
+                        e("div",{style:{fontSize:12,color:"rgba(255,255,255,0.35)",marginBottom:8}},"Selected — set quantity per flavor:"),
+                        e("div",{style:{display:"flex",flexDirection:"column",gap:6}},
+                            form.flavors.map(f=>e("div",{key:f.name,style:{display:"flex",alignItems:"center",gap:8,background:f.outOfStock?"rgba(239,68,68,0.08)":"rgba(16,185,129,0.08)",border:`1px solid ${f.outOfStock?"rgba(239,68,68,0.2)":"rgba(16,185,129,0.2)"}`,borderRadius:10,padding:"8px 12px"}},
+                                e("div",{style:{width:7,height:7,borderRadius:"50%",background:f.outOfStock?"#ef4444":"#10b981",flexShrink:0}}),
+                                e("span",{style:{flex:1,fontSize:13,fontWeight:600,color:"rgba(255,255,255,0.85)"}},f.name),
+                                e("input",{type:"number",value:f.quantity,onChange:ev=>setFlavorQty(f.name,ev.target.value),style:{width:60,padding:"4px 8px",borderRadius:7,border:"1px solid rgba(255,255,255,0.1)",fontSize:13,textAlign:"center",outline:"none",background:"rgba(255,255,255,0.06)",color:"white"}}),
+                                e("button",{onClick:()=>toggleFlavorStock(f.name),style:{background:f.outOfStock?"rgba(16,185,129,0.15)":"rgba(239,68,68,0.15)",border:"none",borderRadius:7,width:28,height:28,cursor:"pointer",fontSize:13,flexShrink:0}},f.outOfStock?"✅":"🔴"),
+                                e("button",{onClick:()=>toggleFlavor(f.name),style:{background:"rgba(239,68,68,0.15)",border:"none",borderRadius:7,width:28,height:28,cursor:"pointer",color:"#f87171",fontWeight:700,fontSize:14,flexShrink:0}},"✕")
+                            ))
                         )
                     ),
-                    e("div", null,
-                        e("label", { style: S.label }, "Cost Price"),
-                        e("div", { style: { position: "relative" } },
-                            e("span", { style: { position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,0.3)", fontSize: 13, fontWeight: 600 } }, "R"),
-                            e("input", { type: "number", value: form.costPrice, onChange: ev => setForm({ ...form, costPrice: ev.target.value }), placeholder: "0.00", style: { ...S.input, paddingLeft: 26 } })
-                        )
-                    )
-                ),
-
-                // margin preview
-                margin !== null && e("div", {
-                    style: {
-                        background: parseFloat(margin) >= 20 ? "rgba(16,185,129,0.1)" : "rgba(245,158,11,0.1)",
-                        border: `1px solid ${parseFloat(margin) >= 20 ? "rgba(16,185,129,0.2)" : "rgba(245,158,11,0.2)"}`,
-                        borderRadius: 10, padding: "10px 14px", marginBottom: 14,
-                        display: "flex", justifyContent: "space-between", alignItems: "center"
-                    }
-                },
-                    e("span", { style: { fontSize: 12, color: "rgba(255,255,255,0.5)", fontWeight: 600 } }, "Profit Margin"),
-                    e("span", { style: { fontSize: 14, fontWeight: 800, color: parseFloat(margin) >= 20 ? "#34d399" : "#fbbf24" } }, margin + "%")
-                ),
-
-                // price-up toggle
-                e("div", {
-                    onClick: () => setForm({ ...form, priceUp: !form.priceUp }),
-                    style: {
-                        display: "flex", alignItems: "center", gap: 14,
-                        background: form.priceUp ? "rgba(245,158,11,0.08)" : "rgba(255,255,255,0.03)",
-                        border: `1px solid ${form.priceUp ? "rgba(245,158,11,0.3)" : "rgba(255,255,255,0.08)"}`,
-                        borderRadius: 12, padding: "13px 16px", marginBottom: 22, cursor: "pointer"
-                    }
-                },
-                    e("div", {
-                        style: { width: 42, height: 24, borderRadius: 12, background: form.priceUp ? "#f59e0b" : "rgba(255,255,255,0.1)", position: "relative", flexShrink: 0, transition: "background 0.2s" }
-                    },
-                        e("div", { style: { position: "absolute", top: 3, left: form.priceUp ? 21 : 3, width: 18, height: 18, borderRadius: "50%", background: "white", transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.3)" } })
-                    ),
-                    e("div", null,
-                        e("div", { style: { fontWeight: 700, fontSize: 14, color: "white" } }, "Price Increased"),
-                        e("div", { style: { fontSize: 12, color: "rgba(255,255,255,0.4)" } }, "Flag this item's price went up")
-                    )
-                ),
-
-                // ── FLAVORS section
-                e("div", { style: { marginBottom: 24 } },
-                    e("div", { style: { fontWeight: 700, fontSize: 13, color: "rgba(255,255,255,0.6)", marginBottom: 12, letterSpacing: "0.06em", textTransform: "uppercase" } }, "🎨 Flavors / Variants"),
-
-                    // selected flavors with qty controls
-                    form.flavors.length > 0 && e("div", { style: { marginBottom: 12 } },
-                        e("div", { style: { fontSize: 12, color: "rgba(255,255,255,0.35)", marginBottom: 8 } }, "Selected — set quantity per flavor:"),
-                        e("div", { style: { display: "flex", flexDirection: "column", gap: 6 } },
-                            form.flavors.map(f =>
-                                e("div", {
-                                    key: f.name,
-                                    style: {
-                                        display: "flex", alignItems: "center", gap: 8,
-                                        background: f.outOfStock ? "rgba(239,68,68,0.08)" : "rgba(16,185,129,0.08)",
-                                        border: `1px solid ${f.outOfStock ? "rgba(239,68,68,0.2)" : "rgba(16,185,129,0.2)"}`,
-                                        borderRadius: 10, padding: "8px 12px"
-                                    }
-                                },
-                                    e("div", { style: { width: 7, height: 7, borderRadius: "50%", background: f.outOfStock ? "#ef4444" : "#10b981", flexShrink: 0 } }),
-                                    e("span", { style: { flex: 1, fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.85)" } }, f.name),
-                                    e("input", {
-                                        type: "number",
-                                        value: f.quantity,
-                                        onChange: ev => setFlavorQty(f.name, ev.target.value),
-                                        style: { width: 60, padding: "4px 8px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", fontSize: 13, textAlign: "center", outline: "none", background: "rgba(255,255,255,0.06)", color: "white" }
-                                    }),
-                                    e("button", {
-                                        onClick: () => toggleFlavorStock(f.name),
-                                        title: f.outOfStock ? "Mark in stock" : "Mark finished",
-                                        style: { background: f.outOfStock ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)", border: "none", borderRadius: 7, width: 28, height: 28, cursor: "pointer", fontSize: 13, flexShrink: 0 }
-                                    }, f.outOfStock ? "✅" : "🔴"),
-                                    e("button", {
-                                        onClick: () => toggleFlavor(f.name),
-                                        title: "Remove flavor",
-                                        style: { background: "rgba(239,68,68,0.15)", border: "none", borderRadius: 7, width: 28, height: 28, cursor: "pointer", color: "#f87171", fontWeight: 700, fontSize: 14, flexShrink: 0 }
-                                    }, "✕")
-                                )
-                            )
-                        )
-                    ),
-
-                    // flavor search + pill picker
-                    e("input", {
-                        value: flavorSearch,
-                        onChange: ev => setFlavorSearch(ev.target.value),
-                        placeholder: "🔍  Search flavors to add...",
-                        style: { ...S.input, marginBottom: 8 }
-                    }),
-                    e("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 } },
-                        visibleFlavors.map(f => {
-                            const selected = selectedNames.includes(f);
-                            return e("button", {
-                                key: f,
-                                onClick: () => toggleFlavor(f),
-                                style: {
-                                    padding: "6px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600,
-                                    cursor: "pointer",
-                                    border: `1px solid ${selected ? "#f59e0b" : "rgba(255,255,255,0.1)"}`,
-                                    background: selected ? "rgba(245,158,11,0.15)" : "rgba(255,255,255,0.04)",
-                                    color: selected ? "#fbbf24" : "rgba(255,255,255,0.55)",
-                                    transition: "all 0.15s"
-                                }
-                            }, (selected ? "✓ " : "") + f);
+                    e("input",{value:flavorSearch,onChange:ev=>setFlavorSearch(ev.target.value),placeholder:"🔍  Search flavors to add...",style:{...S.input,marginBottom:8}}),
+                    e("div",{style:{display:"flex",flexWrap:"wrap",gap:6}},
+                        visibleFlavors.map(f=>{
+                            const sel=selectedNames.includes(f);
+                            return e("button",{key:f,onClick:()=>toggleFlavor(f),style:{padding:"6px 12px",borderRadius:999,fontSize:12,fontWeight:600,cursor:"pointer",border:`1px solid ${sel?"#f59e0b":"rgba(255,255,255,0.1)"}`,background:sel?"rgba(245,158,11,0.15)":"rgba(255,255,255,0.04)",color:sel?"#fbbf24":"rgba(255,255,255,0.55)",transition:"all 0.15s"}},(sel?"✓ ":"")+f);
                         })
                     )
                 ),
 
-                // submit buttons
-                e("div", { style: { display: "flex", gap: 10 } },
-                    e("button", {
-                        onClick: onClose,
-                        style: { flex: 1, padding: 14, borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", fontSize: 14, fontWeight: 700, cursor: "pointer", color: "rgba(255,255,255,0.6)" }
-                    }, "Cancel"),
-                    e("button", {
-                        onClick: () => onSubmit(form),
-                        style: { flex: 2, padding: 14, borderRadius: 12, border: "none", background: "linear-gradient(135deg,#f59e0b,#f97316)", fontSize: 14, fontWeight: 800, cursor: "pointer", color: "#1a1a2e" }
-                    }, isAdd ? "Add Item" : "Save Changes")
+                e("div",{style:{display:"flex",gap:10}},
+                    e("button",{onClick:onClose,style:{flex:1,padding:14,borderRadius:12,border:"1px solid rgba(255,255,255,0.1)",background:"transparent",fontSize:14,fontWeight:700,cursor:"pointer",color:"rgba(255,255,255,0.6)"}},"Cancel"),
+                    e("button",{onClick:()=>onSubmit(form),style:{flex:2,padding:14,borderRadius:12,border:"none",background:"linear-gradient(135deg,#f59e0b,#f97316)",fontSize:14,fontWeight:800,cursor:"pointer",color:"#1a1a2e"}},isAdd?"Add Item":"Save Changes")
                 )
             )
         );
     }
 
-    // ── MAIN APP ───────────────────────────────────────────────────────────
+    // ── MAIN APP ─────────────────────────────────────────────────────────────
     function App() {
-        const [items,         setItems]         = useState(loadItems);
-        const [flavors,       setFlavors]       = useState(loadFlavors);
+        const [items,         setItems]         = useState([]);
+        const [flavors,       setFlavors]       = useState(DEFAULT_FLAVORS);
+        const [loading,       setLoading]       = useState(true);
         const [search,        setSearch]        = useState("");
         const [filter,        setFilter]        = useState("all");
-        const [modal,         setModal]         = useState(null);   // null | "add" | { type:"edit", item }
+        const [modal,         setModal]         = useState(null);
         const [toast,         setToast]         = useState(null);
         const [deleteConfirm, setDeleteConfirm] = useState(null);
         const [showFlavorMgr, setShowFlavorMgr] = useState(false);
         const [expandedId,    setExpandedId]    = useState(null);
 
-        function persist(newItems) { setItems(newItems); saveItems(newItems); }
+        // Live Firebase listeners
+        useEffect(() => {
+            const itemsRef = db.ref("items");
+            itemsRef.on("value", snap => {
+                const val = snap.val();
+                if (val) {
+                    const arr = Object.entries(val).map(([key, item]) => ({ ...item, id: key }));
+                    arr.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                    setItems(arr);
+                } else {
+                    setItems([]);
+                }
+                setLoading(false);
+            });
 
-        function showToast(msg) {
-            setToast(msg);
-            setTimeout(() => setToast(null), 3000);
-        }
+            const flavorsRef = db.ref("flavors");
+            flavorsRef.on("value", snap => {
+                const val = snap.val();
+                if (val) setFlavors(val);
+            });
+
+            return () => { itemsRef.off(); flavorsRef.off(); };
+        }, []);
+
+        function showToast(msg) { setToast(msg); setTimeout(() => setToast(null), 3000); }
 
         function handleSubmit(form) {
-            if (!form.name.trim())             return showToast("⚠️ Item name is required");
+            if (!form.name.trim()) return showToast("⚠️ Item name is required");
             const qty = parseInt(form.quantity);
-            if (isNaN(qty) || qty < 0)         return showToast("⚠️ Enter a valid quantity");
-
+            if (isNaN(qty) || qty < 0) return showToast("⚠️ Enter a valid quantity");
             const base = {
                 name:      form.name.trim(),
                 category:  form.category.trim(),
@@ -532,233 +356,177 @@ function mountInventory() {
                 costPrice: form.costPrice ? parseFloat(form.costPrice) : null,
                 priceUp:   form.priceUp,
                 outOfStock: qty === 0,
-                flavors:   form.flavors,
+                flavors:   form.flavors.length > 0 ? form.flavors : null,
             };
-
             if (modal === "add") {
-                persist([{ id: Date.now(), ...base }, ...items]);
+                db.ref("items").push({ ...base, createdAt: Date.now() });
                 showToast(`✅ "${base.name}" added`);
             } else {
-                persist(items.map(i => i.id === modal.item.id ? { ...i, ...base } : i));
+                db.ref("items/" + modal.item.id).update(base);
                 showToast(`✏️ "${base.name}" updated`);
             }
             setModal(null);
         }
 
-        function toggleOutOfStock(id) {
-            const item = items.find(i => i.id === id);
-            if (!item) return;
+        function toggleOutOfStock(item) {
             const nowOos = !item.outOfStock;
-            persist(items.map(i => i.id === id ? { ...i, outOfStock: nowOos, quantity: nowOos ? 0 : i.quantity } : i));
+            db.ref("items/" + item.id).update({ outOfStock: nowOos, quantity: nowOos ? 0 : item.quantity });
             showToast(nowOos ? `🔴 "${item.name}" marked finished` : `🟢 "${item.name}" back in stock`);
         }
 
         function doDelete() {
             if (!deleteConfirm) return;
-            persist(items.filter(i => i.id !== deleteConfirm.id));
+            db.ref("items/" + deleteConfirm.id).remove();
             showToast(`🗑️ "${deleteConfirm.name}" deleted`);
             setDeleteConfirm(null);
         }
 
         function saveFlavorsHandler(list) {
-            setFlavors(list);
-            saveFlavors(list);
+            db.ref("flavors").set(list);
             showToast("✅ Flavor list updated");
         }
 
-        // filter + search
         const filtered = items.filter(item => {
-            const matchesSearch =
-                item.name.toLowerCase().includes(search.toLowerCase()) ||
-                (item.category || "").toLowerCase().includes(search.toLowerCase());
-            if (!matchesSearch) return false;
-            if (filter === "instock")  return !item.outOfStock;
-            if (filter === "finished") return  item.outOfStock;
-            if (filter === "priceup")  return  item.priceUp;
+            const m = item.name.toLowerCase().includes(search.toLowerCase()) ||
+                      (item.category||"").toLowerCase().includes(search.toLowerCase());
+            if (!m) return false;
+            if (filter==="instock")  return !item.outOfStock;
+            if (filter==="finished") return  item.outOfStock;
+            if (filter==="priceup")  return  item.priceUp;
             return true;
         });
 
         const stats = {
             total:    items.length,
-            inStock:  items.filter(i => !i.outOfStock).length,
-            finished: items.filter(i =>  i.outOfStock).length,
-            priceUp:  items.filter(i =>  i.priceUp).length,
+            inStock:  items.filter(i=>!i.outOfStock).length,
+            finished: items.filter(i=> i.outOfStock).length,
+            priceUp:  items.filter(i=> i.priceUp).length,
         };
 
-        return e("div", { style: { minHeight: "100vh", background: "#0f0f13", fontFamily: "'Inter', Arial, sans-serif", paddingBottom: 80 } },
+        return e("div", { style:{ minHeight:"100vh", background:"#0f0f13", fontFamily:"'Inter',Arial,sans-serif", paddingBottom:80 }},
 
-            // ── HEADER
-            e("div", {
-                style: { background: "rgba(22,22,31,0.95)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "20px 24px", position: "sticky", top: 0, zIndex: 100 }
-            },
-                e("div", { style: { maxWidth: 720, margin: "0 auto" } },
-                    e("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 } },
-                        // logo + title
-                        e("div", { style: { display: "flex", alignItems: "center", gap: 12 } },
-                            e("div", { style: { width: 38, height: 38, background: "linear-gradient(135deg,#f59e0b,#ef4444)", borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, boxShadow: "0 4px 12px rgba(245,158,11,0.3)" } }, "🛒"),
-                            e("div", null,
-                                e("div", { style: { fontSize: 18, fontWeight: 900, color: "white", letterSpacing: "-0.5px" } }, "Sanka Stock"),
-                                e("div", { style: { fontSize: 11, color: "rgba(255,255,255,0.35)", fontWeight: 500 } }, "Inventory Manager")
+            // HEADER
+            e("div",{style:{background:"rgba(22,22,31,0.95)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.06)",padding:"20px 24px",position:"sticky",top:0,zIndex:100}},
+                e("div",{style:{maxWidth:720,margin:"0 auto"}},
+                    e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}},
+                        e("div",{style:{display:"flex",alignItems:"center",gap:12}},
+                            e("div",{style:{width:38,height:38,background:"linear-gradient(135deg,#f59e0b,#ef4444)",borderRadius:11,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,boxShadow:"0 4px 12px rgba(245,158,11,0.3)"}},"🛒"),
+                            e("div",null,
+                                e("div",{style:{fontSize:18,fontWeight:900,color:"white",letterSpacing:"-0.5px"}},"Sanka Stock"),
+                                e("div",{style:{fontSize:11,fontWeight:500,color:canEdit?"rgba(245,158,11,0.8)":"rgba(52,211,153,0.7)"}},
+                                    canEdit ? "✏️ Editor Mode" : "👁 View Only — Live Stock"
+                                )
                             )
                         ),
-                        // action buttons
-                        e("div", { style: { display: "flex", gap: 8 } },
-                            e("button", {
-                                onClick: () => setShowFlavorMgr(true),
-                                style: { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "9px 14px", fontWeight: 700, fontSize: 12, cursor: "pointer" }
-                            }, "🎨 Flavors"),
-                            e("button", {
-                                onClick: () => setModal("add"),
-                                style: { background: "linear-gradient(135deg,#f59e0b,#f97316)", color: "#1a1a2e", border: "none", borderRadius: 10, padding: "9px 16px", fontWeight: 800, fontSize: 13, cursor: "pointer", boxShadow: "0 4px 12px rgba(245,158,11,0.25)" }
-                            }, "+ Add Item")
+                        canEdit && e("div",{style:{display:"flex",gap:8}},
+                            e("button",{onClick:()=>setShowFlavorMgr(true),style:{background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.7)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,padding:"9px 14px",fontWeight:700,fontSize:12,cursor:"pointer"}},"🎨 Flavors"),
+                            e("button",{onClick:()=>setModal("add"),style:{background:"linear-gradient(135deg,#f59e0b,#f97316)",color:"#1a1a2e",border:"none",borderRadius:10,padding:"9px 16px",fontWeight:800,fontSize:13,cursor:"pointer",boxShadow:"0 4px 12px rgba(245,158,11,0.25)"}},"+  Add Item")
                         )
                     ),
-
-                    // stats row
-                    e("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
-                        [
-                            { label: "Total",    value: stats.total,    color: "rgba(255,255,255,0.5)" },
-                            { label: "In Stock", value: stats.inStock,  color: "#34d399" },
-                            { label: "Finished", value: stats.finished, color: "#f87171" },
-                            { label: "Price ↑",  value: stats.priceUp,  color: "#fbbf24" },
-                        ].map(s =>
-                            e("div", { key: s.label, style: { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: "7px 14px", display: "flex", gap: 8, alignItems: "center" } },
-                                e("span", { style: { fontSize: 17, fontWeight: 900, color: s.color } }, s.value),
-                                e("span", { style: { fontSize: 11, color: "rgba(255,255,255,0.35)", fontWeight: 600 } }, s.label)
-                            )
-                        )
+                    e("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
+                        [{label:"Total",value:stats.total,color:"rgba(255,255,255,0.5)"},{label:"In Stock",value:stats.inStock,color:"#34d399"},{label:"Finished",value:stats.finished,color:"#f87171"},{label:"Price ↑",value:stats.priceUp,color:"#fbbf24"}]
+                        .map(s=>e("div",{key:s.label,style:{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:10,padding:"7px 14px",display:"flex",gap:8,alignItems:"center"}},
+                            e("span",{style:{fontSize:17,fontWeight:900,color:s.color}},s.value),
+                            e("span",{style:{fontSize:11,color:"rgba(255,255,255,0.35)",fontWeight:600}},s.label)
+                        ))
                     )
                 )
             ),
 
-            // ── SEARCH + FILTER
-            e("div", { style: { maxWidth: 720, margin: "0 auto", padding: "20px 16px 0" } },
-                e("div", { style: { display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" } },
-                    e("input", {
-                        value: search,
-                        onChange: ev => setSearch(ev.target.value),
-                        placeholder: "🔍  Search items or categories...",
-                        style: { flex: 1, minWidth: 180, padding: "11px 16px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)", fontSize: 14, background: "rgba(255,255,255,0.05)", color: "white", outline: "none", fontFamily: "'Inter',Arial,sans-serif" }
-                    }),
-                    e("select", {
-                        value: filter,
-                        onChange: ev => setFilter(ev.target.value),
-                        style: { padding: "11px 14px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)", fontSize: 13, background: "#1a1a24", color: "rgba(255,255,255,0.7)", cursor: "pointer", outline: "none", fontFamily: "'Inter',Arial,sans-serif" }
-                    },
-                        e("option", { value: "all" },      "All Items"),
-                        e("option", { value: "instock" },  "In Stock"),
-                        e("option", { value: "finished" }, "Finished"),
-                        e("option", { value: "priceup" },  "Price Increased")
+            // SEARCH + FILTER + LIST
+            e("div",{style:{maxWidth:720,margin:"0 auto",padding:"20px 16px 0"}},
+                e("div",{style:{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}},
+                    e("input",{value:search,onChange:ev=>setSearch(ev.target.value),placeholder:"🔍  Search items or categories...",style:{flex:1,minWidth:180,padding:"11px 16px",borderRadius:12,border:"1px solid rgba(255,255,255,0.08)",fontSize:14,background:"rgba(255,255,255,0.05)",color:"white",outline:"none",fontFamily:"'Inter',Arial,sans-serif"}}),
+                    e("select",{value:filter,onChange:ev=>setFilter(ev.target.value),style:{padding:"11px 14px",borderRadius:12,border:"1px solid rgba(255,255,255,0.08)",fontSize:13,background:"#1a1a24",color:"rgba(255,255,255,0.7)",cursor:"pointer",outline:"none",fontFamily:"'Inter',Arial,sans-serif"}},
+                        e("option",{value:"all"},"All Items"),
+                        e("option",{value:"instock"},"In Stock"),
+                        e("option",{value:"finished"},"Finished"),
+                        e("option",{value:"priceup"},"Price Increased")
                     )
                 ),
 
-                // ── ITEMS LIST
-                filtered.length === 0
-                    ? e("div", { style: { textAlign: "center", padding: "80px 20px", color: "rgba(255,255,255,0.2)" } },
-                        e("div", { style: { fontSize: 52, marginBottom: 14, opacity: 0.5 } }, "📦"),
-                        e("div", { style: { fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.3)" } }, "No items found"),
-                        e("div", { style: { fontSize: 13, marginTop: 6, color: "rgba(255,255,255,0.2)" } },
-                            items.length === 0 ? "Tap '+ Add Item' to get started" : "Try a different search or filter"
-                        )
-                      )
-                    : e("div", { style: { display: "flex", flexDirection: "column", gap: 8 } },
-                        filtered.map(item => {
-                            const isExpanded = expandedId === item.id;
-                            const hasFlavors = item.flavors && item.flavors.length > 0;
-                            const availCount = hasFlavors ? item.flavors.filter(f => !f.outOfStock).length : 0;
-                            const margin     = (item.sellPrice && item.costPrice)
-                                ? ((item.sellPrice - item.costPrice) / item.sellPrice * 100).toFixed(1)
-                                : null;
-                            const cardStyle  = item.outOfStock ? S.cardWarn : item.priceUp ? S.cardPrice : S.card;
+                // Loading spinner
+                loading && e("div",{style:{textAlign:"center",padding:"60px 20px",color:"rgba(255,255,255,0.3)"}},
+                    e("div",{style:{fontSize:36,marginBottom:12}},"⏳"),
+                    e("div",{style:{fontSize:14,fontWeight:600}},"Loading live stock...")
+                ),
 
-                            return e("div", { key: item.id, style: cardStyle },
-                                e("div", { style: { padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 } },
-                                    // status dot
-                                    e("div", { style: { width: 10, height: 10, borderRadius: "50%", background: item.outOfStock ? "#ef4444" : "#10b981", flexShrink: 0, boxShadow: `0 0 0 3px ${item.outOfStock ? "rgba(239,68,68,0.15)" : "rgba(16,185,129,0.15)"}` } }),
+                // Empty state
+                !loading && filtered.length===0 && e("div",{style:{textAlign:"center",padding:"80px 20px"}},
+                    e("div",{style:{fontSize:52,marginBottom:14,opacity:0.5}},"📦"),
+                    e("div",{style:{fontSize:16,fontWeight:700,color:"rgba(255,255,255,0.3)"}},"No items found"),
+                    e("div",{style:{fontSize:13,marginTop:6,color:"rgba(255,255,255,0.2)"}},
+                        items.length===0 ? (canEdit?"Tap '+ Add Item' to get started":"No stock has been added yet") : "Try a different search or filter"
+                    )
+                ),
 
-                                    // main info
-                                    e("div", { style: { flex: 1, minWidth: 0 } },
-                                        e("div", { style: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 5 } },
-                                            e("span", { style: { fontWeight: 700, fontSize: 15, color: item.outOfStock ? "rgba(255,255,255,0.35)" : "white", textDecoration: item.outOfStock ? "line-through" : "none", letterSpacing: "-0.2px" } }, item.name),
-                                            item.priceUp    && e(Badge, { color: "orange" }, "Price ↑"),
-                                            item.outOfStock && e(Badge, { color: "red" },    "Finished")
-                                        ),
-                                        e("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" } },
-                                            item.category && e("span", { style: { fontSize: 11, color: "rgba(255,255,255,0.35)", fontWeight: 500 } }, "📁 " + item.category),
-                                            e("span", {
-                                                style: { fontSize: 11, fontWeight: item.quantity <= 3 ? 700 : 500, color: (item.quantity <= 3 && !item.outOfStock) ? "#f87171" : "rgba(255,255,255,0.45)" }
-                                            }, "Qty: " + item.quantity + (item.quantity <= 3 && item.quantity > 0 ? " ⚠️" : "")),
-                                            item.sellPrice != null && e("span", { style: { fontSize: 11, color: "#34d399", fontWeight: 700, background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.15)", borderRadius: 6, padding: "1px 7px" } }, "Sell R" + item.sellPrice.toFixed(2)),
-                                            item.costPrice != null && e("span", { style: { fontSize: 11, color: "#a5b4fc", fontWeight: 700, background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: 6, padding: "1px 7px" } }, "Cost R" + item.costPrice.toFixed(2)),
-                                            margin && e("span", { style: { fontSize: 11, color: parseFloat(margin) >= 20 ? "#34d399" : "#fbbf24", fontWeight: 700 } }, margin + "% margin"),
-                                            hasFlavors && e("button", {
-                                                onClick: () => setExpandedId(isExpanded ? null : item.id),
-                                                style: { background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: 999, padding: "2px 10px", fontSize: 10, fontWeight: 700, color: "#a5b4fc", cursor: "pointer" }
-                                            }, `🎨 ${availCount}/${item.flavors.length} ${isExpanded ? "▲" : "▼"}`)
-                                        )
+                // Items
+                !loading && filtered.length>0 && e("div",{style:{display:"flex",flexDirection:"column",gap:8}},
+                    filtered.map(item=>{
+                        const isExpanded = expandedId===item.id;
+                        const hasFlavors = item.flavors && item.flavors.length>0;
+                        const availCount = hasFlavors ? item.flavors.filter(f=>!f.outOfStock).length : 0;
+                        const margin     = (item.sellPrice&&item.costPrice) ? ((item.sellPrice-item.costPrice)/item.sellPrice*100).toFixed(1) : null;
+                        const cardStyle  = item.outOfStock ? S.cardWarn : item.priceUp ? S.cardPrice : S.card;
+
+                        return e("div",{key:item.id,style:cardStyle},
+                            e("div",{style:{padding:"14px 16px",display:"flex",alignItems:"center",gap:12}},
+                                e("div",{style:{width:10,height:10,borderRadius:"50%",background:item.outOfStock?"#ef4444":"#10b981",flexShrink:0,boxShadow:`0 0 0 3px ${item.outOfStock?"rgba(239,68,68,0.15)":"rgba(16,185,129,0.15)"}`}}),
+                                e("div",{style:{flex:1,minWidth:0}},
+                                    e("div",{style:{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:5}},
+                                        e("span",{style:{fontWeight:700,fontSize:15,color:item.outOfStock?"rgba(255,255,255,0.35)":"white",textDecoration:item.outOfStock?"line-through":"none",letterSpacing:"-0.2px"}},item.name),
+                                        item.priceUp    && e(Badge,{color:"orange"},"Price ↑"),
+                                        item.outOfStock && e(Badge,{color:"red"},"Finished")
                                     ),
-
-                                    // action buttons
-                                    e("div", { style: { display: "flex", gap: 5, flexShrink: 0 } },
-                                        e(Btn, { onClick: () => toggleOutOfStock(item.id), title: item.outOfStock ? "Mark in stock" : "Mark finished", style: { background: item.outOfStock ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)" } }, item.outOfStock ? "✅" : "🔴"),
-                                        e(Btn, { onClick: () => setModal({ type: "edit", item }), title: "Edit", style: { background: "rgba(99,102,241,0.15)" } }, "✏️"),
-                                        e(Btn, { onClick: () => setDeleteConfirm(item), title: "Delete", style: { background: "rgba(239,68,68,0.1)" } }, "🗑️")
+                                    e("div",{style:{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}},
+                                        item.category && e("span",{style:{fontSize:11,color:"rgba(255,255,255,0.35)",fontWeight:500}},"📁 "+item.category),
+                                        e("span",{style:{fontSize:11,fontWeight:item.quantity<=3?700:500,color:(item.quantity<=3&&!item.outOfStock)?"#f87171":"rgba(255,255,255,0.45)"}},"Qty: "+item.quantity+(item.quantity<=3&&item.quantity>0?" ⚠️":"")),
+                                        item.sellPrice!=null && e("span",{style:{fontSize:11,color:"#34d399",fontWeight:700,background:"rgba(16,185,129,0.1)",border:"1px solid rgba(16,185,129,0.15)",borderRadius:6,padding:"1px 7px"}},"Sell R"+item.sellPrice.toFixed(2)),
+                                        item.costPrice!=null && e("span",{style:{fontSize:11,color:"#a5b4fc",fontWeight:700,background:"rgba(99,102,241,0.1)",border:"1px solid rgba(99,102,241,0.15)",borderRadius:6,padding:"1px 7px"}},"Cost R"+item.costPrice.toFixed(2)),
+                                        margin && e("span",{style:{fontSize:11,color:parseFloat(margin)>=20?"#34d399":"#fbbf24",fontWeight:700}},margin+"% margin"),
+                                        hasFlavors && e("button",{onClick:()=>setExpandedId(isExpanded?null:item.id),style:{background:"rgba(99,102,241,0.12)",border:"1px solid rgba(99,102,241,0.2)",borderRadius:999,padding:"2px 10px",fontSize:10,fontWeight:700,color:"#a5b4fc",cursor:"pointer"}},`🎨 ${availCount}/${item.flavors.length} ${isExpanded?"▲":"▼"}`)
                                     )
                                 ),
-
-                                // ── FLAVOR EXPAND PANEL
-                                isExpanded && hasFlavors && e("div", {
-                                    style: { borderTop: "1px solid rgba(255,255,255,0.06)", padding: "12px 16px 14px", background: "rgba(0,0,0,0.2)" }
-                                },
-                                    e("div", { style: { fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.3)", marginBottom: 8, letterSpacing: "0.08em", textTransform: "uppercase" } }, "Flavors"),
-                                    e("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 } },
-                                        item.flavors.map(f =>
-                                            e("div", {
-                                                key: f.name,
-                                                style: {
-                                                    display: "flex", alignItems: "center", gap: 5,
-                                                    background: f.outOfStock ? "rgba(239,68,68,0.12)" : "rgba(16,185,129,0.12)",
-                                                    border: `1px solid ${f.outOfStock ? "rgba(239,68,68,0.2)" : "rgba(16,185,129,0.2)"}`,
-                                                    borderRadius: 999, padding: "4px 11px"
-                                                }
-                                            },
-                                                e("div", { style: { width: 6, height: 6, borderRadius: "50%", background: f.outOfStock ? "#ef4444" : "#10b981", flexShrink: 0 } }),
-                                                e("span", { style: { fontSize: 12, fontWeight: 700, color: f.outOfStock ? "#f87171" : "#34d399" } }, f.name),
-                                                e("span", { style: { fontSize: 10, color: f.outOfStock ? "rgba(248,113,113,0.7)" : "rgba(52,211,153,0.7)", fontWeight: 600 } },
-                                                    f.outOfStock ? "· Finished" : `· ${f.quantity} left`
-                                                )
-                                            )
-                                        )
-                                    )
+                                canEdit && e("div",{style:{display:"flex",gap:5,flexShrink:0}},
+                                    e(Btn,{onClick:()=>toggleOutOfStock(item),title:item.outOfStock?"Mark in stock":"Mark finished",style:{background:item.outOfStock?"rgba(16,185,129,0.15)":"rgba(239,68,68,0.15)"}},item.outOfStock?"✅":"🔴"),
+                                    e(Btn,{onClick:()=>setModal({type:"edit",item}),title:"Edit",style:{background:"rgba(99,102,241,0.15)"}},"✏️"),
+                                    e(Btn,{onClick:()=>setDeleteConfirm(item),title:"Delete",style:{background:"rgba(239,68,68,0.1)"}},"🗑️")
                                 )
-                            );
-                        })
-                    )
+                            ),
+                            isExpanded && hasFlavors && e("div",{style:{borderTop:"1px solid rgba(255,255,255,0.06)",padding:"12px 16px 14px",background:"rgba(0,0,0,0.2)"}},
+                                e("div",{style:{fontSize:10,fontWeight:700,color:"rgba(255,255,255,0.3)",marginBottom:8,letterSpacing:"0.08em",textTransform:"uppercase"}},"Flavors"),
+                                e("div",{style:{display:"flex",flexWrap:"wrap",gap:6}},
+                                    item.flavors.map(f=>e("div",{key:f.name,style:{display:"flex",alignItems:"center",gap:5,background:f.outOfStock?"rgba(239,68,68,0.12)":"rgba(16,185,129,0.12)",border:`1px solid ${f.outOfStock?"rgba(239,68,68,0.2)":"rgba(16,185,129,0.2)"}`,borderRadius:999,padding:"4px 11px"}},
+                                        e("div",{style:{width:6,height:6,borderRadius:"50%",background:f.outOfStock?"#ef4444":"#10b981",flexShrink:0}}),
+                                        e("span",{style:{fontSize:12,fontWeight:700,color:f.outOfStock?"#f87171":"#34d399"}},f.name),
+                                        e("span",{style:{fontSize:10,color:f.outOfStock?"rgba(248,113,113,0.7)":"rgba(52,211,153,0.7)",fontWeight:600}},f.outOfStock?"· Finished":`· ${f.quantity} left`)
+                                    ))
+                                )
+                            )
+                        );
+                    })
+                )
             ),
 
-            // ── MODALS
-            modal         && e(ItemModal,     { modal, flavors, onClose: () => setModal(null), onSubmit: handleSubmit }),
-            showFlavorMgr && e(FlavorManager, { flavors, onClose: () => setShowFlavorMgr(false), onSave: saveFlavorsHandler }),
+            // MODALS
+            modal         && e(ItemModal,     {modal,flavors,onClose:()=>setModal(null),onSubmit:handleSubmit}),
+            showFlavorMgr && e(FlavorManager, {flavors,onClose:()=>setShowFlavorMgr(false),onSave:saveFlavorsHandler}),
 
-            // ── DELETE CONFIRM
-            deleteConfirm && e("div", {
-                style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300, padding: 20, backdropFilter: "blur(4px)" }
-            },
-                e("div", { style: { background: "#16161f", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: 28, maxWidth: 320, width: "100%", textAlign: "center" } },
-                    e("div", { style: { fontSize: 42, marginBottom: 12 } }, "🗑️"),
-                    e("div", { style: { fontWeight: 800, fontSize: 17, marginBottom: 8, color: "white" } }, "Delete Item?"),
-                    e("div", { style: { color: "rgba(255,255,255,0.4)", fontSize: 14, marginBottom: 24 } }, `"${deleteConfirm.name}" will be permanently removed.`),
-                    e("div", { style: { display: "flex", gap: 10 } },
-                        e("button", { onClick: () => setDeleteConfirm(null), style: { flex: 1, padding: 13, borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", fontWeight: 700, cursor: "pointer", color: "rgba(255,255,255,0.6)", fontSize: 14 } }, "Cancel"),
-                        e("button", { onClick: doDelete,                     style: { flex: 1, padding: 13, borderRadius: 12, border: "none", background: "linear-gradient(135deg,#ef4444,#dc2626)", color: "white", fontWeight: 800, cursor: "pointer", fontSize: 14 } }, "Delete")
+            // DELETE CONFIRM
+            deleteConfirm && e("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:300,padding:20,backdropFilter:"blur(4px)"}},
+                e("div",{style:{background:"#16161f",border:"1px solid rgba(255,255,255,0.1)",borderRadius:20,padding:28,maxWidth:320,width:"100%",textAlign:"center"}},
+                    e("div",{style:{fontSize:42,marginBottom:12}},"🗑️"),
+                    e("div",{style:{fontWeight:800,fontSize:17,marginBottom:8,color:"white"}},"Delete Item?"),
+                    e("div",{style:{color:"rgba(255,255,255,0.4)",fontSize:14,marginBottom:24}},`"${deleteConfirm.name}" will be permanently removed.`),
+                    e("div",{style:{display:"flex",gap:10}},
+                        e("button",{onClick:()=>setDeleteConfirm(null),style:{flex:1,padding:13,borderRadius:12,border:"1px solid rgba(255,255,255,0.1)",background:"transparent",fontWeight:700,cursor:"pointer",color:"rgba(255,255,255,0.6)",fontSize:14}},"Cancel"),
+                        e("button",{onClick:doDelete,style:{flex:1,padding:13,borderRadius:12,border:"none",background:"linear-gradient(135deg,#ef4444,#dc2626)",color:"white",fontWeight:800,cursor:"pointer",fontSize:14}},"Delete")
                     )
                 )
             ),
 
-            // ── TOAST
-            toast && e("div", {
-                style: { position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: "rgba(22,22,31,0.95)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.1)", color: "white", padding: "13px 24px", borderRadius: 14, fontWeight: 600, fontSize: 13, boxShadow: "0 8px 32px rgba(0,0,0,0.4)", zIndex: 400, whiteSpace: "nowrap" }
-            }, toast)
+            // TOAST
+            toast && e("div",{style:{position:"fixed",bottom:28,left:"50%",transform:"translateX(-50%)",background:"rgba(22,22,31,0.95)",backdropFilter:"blur(12px)",border:"1px solid rgba(255,255,255,0.1)",color:"white",padding:"13px 24px",borderRadius:14,fontWeight:600,fontSize:13,boxShadow:"0 8px 32px rgba(0,0,0,0.4)",zIndex:400,whiteSpace:"nowrap"}},toast)
         );
     }
 
