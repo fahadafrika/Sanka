@@ -13,75 +13,190 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', Arial, sans-serif; background: #0f0f13; min-height: 100vh; }
 
+        /* ── LOGIN PAGE ─────────────────────────────────────────────── */
+        /* opens as an overlay on top of the customer catalogue */
         #login-gate {
-            display: flex; justify-content: center; align-items: center;
-            min-height: 100vh;
-            background: radial-gradient(ellipse at 50% 0%, #1e1b4b 0%, #0f0f13 70%);
+            position: fixed; inset: 0; z-index: 1000;
+            overflow-x: hidden; overflow-y: auto;
+            display: none; justify-content: center; align-items: center;
+            padding: 24px 16px;
+            background: rgba(9,9,13,0.88);
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            animation: fadeIn 0.25s ease both;
         }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        #close-login {
+            position: absolute; top: 14px; right: 14px;
+            width: 34px; height: 34px; border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05);
+            color: rgba(255,255,255,0.6); font-size: 15px; cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+        #close-login:hover { background: rgba(255,255,255,0.1); color: white; }
+        /* soft animated glow blobs */
+        .blob {
+            position: absolute; border-radius: 50%;
+            filter: blur(80px); opacity: 0.55; pointer-events: none;
+            animation: drift 18s ease-in-out infinite alternate;
+        }
+        .blob-1 { width: 420px; height: 420px; background: #f59e0b; top: -160px; left: -120px; opacity: 0.28; }
+        .blob-2 { width: 380px; height: 380px; background: #6366f1; bottom: -140px; right: -100px; opacity: 0.3; animation-delay: -6s; }
+        .blob-3 { width: 260px; height: 260px; background: #ef4444; top: 45%; left: 60%; opacity: 0.16; animation-delay: -12s; }
+        @keyframes drift {
+            0%   { transform: translate(0, 0) scale(1); }
+            50%  { transform: translate(40px, 30px) scale(1.08); }
+            100% { transform: translate(-30px, 50px) scale(0.95); }
+        }
+        /* faint grid texture */
+        #login-gate::before {
+            content: ""; position: absolute; inset: 0; pointer-events: none;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 44px 44px;
+            mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+            -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+        }
+
         .login-box {
-            background: rgba(255,255,255,0.04);
+            position: relative; z-index: 1;
+            width: 100%; max-width: 380px;
+            padding: 40px 32px 28px;
+            border-radius: 28px;
+            background: linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
             border: 1px solid rgba(255,255,255,0.1);
-            backdrop-filter: blur(20px);
-            padding: 48px 40px; border-radius: 24px;
-            text-align: center; width: 340px;
-            box-shadow: 0 32px 80px rgba(0,0,0,0.5);
+            backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            box-shadow: 0 40px 100px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.08);
+            text-align: center;
+            animation: rise 0.6s cubic-bezier(.2,.8,.2,1) both;
         }
+        @keyframes rise { from { opacity: 0; transform: translateY(24px) scale(0.98); } to { opacity: 1; transform: none; } }
+        .login-box.shake { animation: shake 0.4s; }
+        @keyframes shake {
+            0%,100% { transform: translateX(0); }
+            20% { transform: translateX(-8px); } 40% { transform: translateX(8px); }
+            60% { transform: translateX(-5px); } 80% { transform: translateX(5px); }
+        }
+
         .login-logo {
-            width: 56px; height: 56px;
-            background: linear-gradient(135deg, #f59e0b, #ef4444);
-            border-radius: 16px;
+            width: 68px; height: 68px; margin: 0 auto 18px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #fbbf24, #f97316 55%, #ef4444);
             display: flex; align-items: center; justify-content: center;
-            font-size: 26px; margin: 0 auto 16px;
-            box-shadow: 0 8px 24px rgba(245,158,11,0.3);
+            font-size: 32px;
+            box-shadow: 0 12px 32px rgba(249,115,22,0.4), inset 0 1px 0 rgba(255,255,255,0.35);
+            animation: float 4s ease-in-out infinite;
         }
-        .login-box h2 { color: white; font-size: 20px; font-weight: 900; margin-bottom: 8px; letter-spacing: -0.5px; }
-        /* Somalia flag circle */
-        . somalia-flag {
-            width: 32px; height: 32px; border-radius: 50%;
-            background: #4189DD;
-            display: flex; align-items: center; justify-content: center;
-            margin: 0 auto 20px;
-            box-shadow: 0 2px 10px rgba(65,137,221,0.4);
-            font-size: 18px;
-            border: 2px solid rgba(255, 255, 255, 0.59);
+        @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+
+        .login-box h2 {
+            font-size: 22px; font-weight: 900; letter-spacing: -0.6px; line-height: 1.15;
+            background: linear-gradient(180deg, #ffffff, rgba(255,255,255,0.7));
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+            margin-bottom: 10px;
         }
-        .login-subtitle { color: rgba(255,255,255,0.4); font-size: 13px; margin-bottom: 28px; }
+        .live-pill {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 5px 12px; border-radius: 999px;
+            background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25);
+            color: #6ee7b7; font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+            margin-bottom: 28px;
+        }
+        .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #10b981; position: relative; }
+        .live-dot::after {
+            content: ""; position: absolute; inset: 0; border-radius: 50%; background: #10b981;
+            animation: ping 1.6s cubic-bezier(0,0,.2,1) infinite;
+        }
+        @keyframes ping { 75%,100% { transform: scale(2.6); opacity: 0; } }
+
+        .field-label {
+            display: block; text-align: left;
+            font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+            color: rgba(255,255,255,0.45); margin-bottom: 8px;
+        }
+        .pass-wrap { position: relative; margin-bottom: 14px; }
+        .pass-icon {
+            position: absolute; left: 15px; top: 50%; transform: translateY(-50%);
+            font-size: 15px; opacity: 0.55; pointer-events: none;
+        }
         #pass-field {
-            width: 100%; padding: 14px 16px;
-            background: rgba(255,255,255,0.07);
-            border: 1px solid rgba(255,255,255,0.12);
-            border-radius: 12px; font-size: 15px;
-            margin-bottom: 12px; outline: none;
-            color: white; box-sizing: border-box;
-            transition: border-color 0.2s;
+            width: 100%; padding: 15px 48px 15px 44px;
+            background: rgba(0,0,0,0.25);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px; font-size: 15px;
+            outline: none; color: white;
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
             font-family: 'Inter', Arial, sans-serif;
         }
         #pass-field::placeholder { color: rgba(255,255,255,0.3); }
-        #pass-field:focus { border-color: rgba(245,158,11,0.6); background: rgba(255,255,255,0.09); }
+        #pass-field:focus {
+            border-color: rgba(245,158,11,0.7);
+            background: rgba(0,0,0,0.35);
+            box-shadow: 0 0 0 4px rgba(245,158,11,0.15);
+        }
+        #toggle-pass {
+            position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+            width: 34px; height: 34px; border-radius: 10px;
+            border: none; background: transparent; cursor: pointer;
+            font-size: 15px; opacity: 0.6; transition: opacity 0.2s, background 0.2s;
+        }
+        #toggle-pass:hover { opacity: 1; background: rgba(255,255,255,0.06); }
+
+        .btn {
+            width: 100%; padding: 15px; border-radius: 14px;
+            font-size: 15px; font-weight: 800; cursor: pointer;
+            font-family: 'Inter', Arial, sans-serif;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            transition: transform 0.15s, box-shadow 0.2s, background 0.2s, border-color 0.2s;
+        }
+        .btn:active { transform: scale(0.98); }
         #login-btn {
-            width: 100%; padding: 14px;
-            background: linear-gradient(135deg, #f59e0b, #f97316);
-            color: #1a1a2e; border: none; border-radius: 12px;
-            font-size: 15px; font-weight: 800; cursor: pointer;
-            font-family: 'Inter', Arial, sans-serif;
-            box-shadow: 0 4px 16px rgba(245,158,11,0.35);
-            transition: opacity 0.2s, transform 0.1s;
+            border: none; color: #1a1205;
+            background: linear-gradient(135deg, #fbbf24, #f97316);
+            box-shadow: 0 8px 24px rgba(249,115,22,0.35), inset 0 1px 0 rgba(255,255,255,0.3);
         }
-        #login-btn:hover { opacity: 0.92; transform: translateY(-1px); }
-        #login-btn:active { transform: translateY(0); }
+        #login-btn:hover { box-shadow: 0 12px 32px rgba(249,115,22,0.5), inset 0 1px 0 rgba(255,255,255,0.3); transform: translateY(-1px); }
+        #login-btn:disabled { opacity: 0.7; cursor: wait; }
+
+        .divider {
+            display: flex; align-items: center; gap: 12px;
+            margin: 18px 0; color: rgba(255,255,255,0.3);
+            font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+        }
+        .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: rgba(255,255,255,0.08); }
+
         .view-only-btn {
-            width: 100%; padding: 14px; margin-top: 10px;
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: white; border: none; border-radius: 12px;
-            font-size: 15px; font-weight: 800; cursor: pointer;
-            font-family: 'Inter', Arial, sans-serif;
-            box-shadow: 0 4px 16px rgba(16,185,129,0.35);
-            transition: opacity 0.2s, transform 0.1s;
+            color: #6ee7b7;
+            background: rgba(16,185,129,0.08);
+            border: 1px solid rgba(16,185,129,0.3);
         }
-        .view-only-btn:hover { opacity: 0.92; transform: translateY(-1px); }
-        .view-only-btn:active { transform: translateY(0); }
-        #error-msg { display: none; color: #f87171; margin-top: 12px; font-size: 13px; font-weight: 500; }
-        #content { display: none; }
+        .view-only-btn:hover { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.5); transform: translateY(-1px); }
+
+        #error-msg {
+            display: none; margin: -4px 0 14px;
+            padding: 10px 12px; border-radius: 12px;
+            background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25);
+            color: #fca5a5; font-size: 13px; font-weight: 600; text-align: left;
+        }
+
+        .login-footer {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            margin-top: 26px; padding-top: 18px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            color: rgba(255,255,255,0.35); font-size: 12px; font-weight: 500;
+        }
+        /* Somali flag: blue circle + white star */
+        .somalia-flag {
+            width: 20px; height: 20px; border-radius: 50%;
+            background: #4189DD; color: white;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 11px; line-height: 1;
+            box-shadow: 0 0 0 2px rgba(255,255,255,0.15), 0 2px 8px rgba(65,137,221,0.5);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .blob, .login-logo, .live-dot::after, .login-box { animation: none; }
+        }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
@@ -90,16 +205,32 @@
 <body>
 
 <div id="login-gate">
-    <div class="login-box">
-        <div class="login-logo"></div>
-        <h2>SANKA CASH AND CARRY</h2>
-        <!-- Somali flag icon: blue circle + white star -->
-        <div class="somali-flag">★</div>
-        <p class="login-subtitle">Inventory Management</p>
-        <input type="password" id="pass-field" placeholder="Staff password to edit" />
-        <button id="login-btn">✏️ Edit Dashboard</button>
-        <button class="view-only-btn" id="view-btn">👁 View Stock Only</button>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+
+    <div class="login-box" id="login-box">
+        <button type="button" id="close-login" title="Back to catalogue">✕</button>
+        <div class="login-logo">🛒</div>
+        <h2>Sanka Cash &amp; Carry</h2>
+        <div class="live-pill"><span class="live-dot"></span>STAFF ACCESS</div>
+
+        <label class="field-label" for="pass-field">Staff password</label>
+        <div class="pass-wrap">
+            <span class="pass-icon">🔒</span>
+            <input type="password" id="pass-field" placeholder="Enter password to edit" autocomplete="current-password" />
+            <button type="button" id="toggle-pass" title="Show password">👁</button>
+        </div>
         <p id="error-msg">❌ Incorrect password. Try again.</p>
+        <button class="btn" id="login-btn">✏️ Edit Dashboard</button>
+
+        <div class="divider">or</div>
+        <button class="btn view-only-btn" id="view-btn">← Back to Catalogue</button>
+
+        <div class="login-footer">
+            <span class="somalia-flag">★</span>
+            <span>Proudly serving the community</span>
+        </div>
     </div>
 </div>
 
@@ -136,15 +267,44 @@ async function validate() {
     } else {
         errMsg.style.display = "block";
         document.getElementById("pass-field").value = "";
+        const box = document.getElementById("login-box");
+        box.classList.remove("shake"); void box.offsetWidth; box.classList.add("shake");
     }
 }
-function launchApp() {
+document.getElementById("toggle-pass").addEventListener("click", () => {
+    const f = document.getElementById("pass-field");
+    const show = f.type === "password";
+    f.type = show ? "text" : "password";
+    document.getElementById("toggle-pass").textContent = show ? "🙈" : "👁";
+    document.getElementById("toggle-pass").title = show ? "Hide password" : "Show password";
+    f.focus();
+});
+document.getElementById("pass-field").addEventListener("input", () => {
+    document.getElementById("error-msg").style.display = "none";
+});
+// Customers land on the catalogue; staff open the login overlay from the top corner
+function openLogin() {
+    document.getElementById("pass-field").value = "";
+    document.getElementById("error-msg").style.display = "none";
+    document.getElementById("login-gate").style.display = "flex";
+    setTimeout(() => document.getElementById("pass-field").focus(), 50);
+}
+function closeLogin() {
     document.getElementById("login-gate").style.display = "none";
-    document.getElementById("content").style.display = "block";
+}
+function launchApp() {
+    closeLogin();
     mountInventory(isEditor);
 }
+function logout() {
+    isEditor = false;
+    mountInventory(false);
+}
 document.getElementById("login-btn").addEventListener("click", validate);
-document.getElementById("view-btn").addEventListener("click", () => { isEditor = false; launchApp(); });
+document.getElementById("view-btn").addEventListener("click", closeLogin);
+document.getElementById("close-login").addEventListener("click", closeLogin);
+document.getElementById("login-gate").addEventListener("click", ev => { if (ev.target.id === "login-gate") closeLogin(); });
+document.addEventListener("keydown", ev => { if (ev.key === "Escape") closeLogin(); });
 document.getElementById("pass-field").addEventListener("keypress", e => { if (e.key === "Enter") validate(); });
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -157,11 +317,34 @@ const DEFAULT_FLAVORS = [
 // Sale type options
 const SALE_TYPES = ["Loose", "Box", "Both"];
 
+function calcMargin(sell, cost) {
+    const s = parseFloat(sell), c = parseFloat(cost);
+    return (s && c) ? ((s - c) / s * 100).toFixed(1) : null;
+}
+
+// Below this quantity an item (or loose/box unit, or flavor) shows yellow as "low stock"
+const LOW_STOCK = 10;
+const isLowQty = q => q > 0 && q < LOW_STOCK;
+
+// Each way an item is sold (loose / box) with its own qty + prices
+function getUnits(item) {
+    const loose = { key:"loose", label:"📦 Loose", qty:item.quantity, sell:item.sellPrice, cost:item.costPrice, accent:"#60a5fa" };
+    if (item.saleType === "Both")
+        return [ loose, { key:"box", label:"🗃️ Box", qty:item.boxQuantity||0, sell:item.boxSellPrice, cost:item.boxCostPrice, per:item.unitsPerBox, accent:"#a78bfa" } ];
+    if (item.saleType === "Box")
+        return [ { key:"box", label:"🗃️ Box", qty:item.quantity, sell:item.sellPrice, cost:item.costPrice, per:item.unitsPerBox, accent:"#a78bfa" } ];
+    return [ loose ];
+}
+function isLowStock(item) {
+    return !item.outOfStock && getUnits(item).some(u => isLowQty(u.qty));
+}
+
 const S = {
-    card:           { background:"#1a1a24", border:"1px solid rgba(255,255,255,0.08)", borderRadius:16, overflow:"hidden" },
-    cardWarn:       { background:"#1e1015", border:"1px solid rgba(239,68,68,0.25)",   borderRadius:16, overflow:"hidden" },
-    cardPrice:      { background:"#1a1a10", border:"1px solid rgba(253,211,77,0.2)",   borderRadius:16, overflow:"hidden" },
-    cardFlavorWarn: { background:"#1a1508", border:"1px solid rgba(251,191,36,0.35)",  borderRadius:16, overflow:"hidden" },
+    card:        { background:"#1a1a24", border:"1px solid rgba(255,255,255,0.08)", borderRadius:16, overflow:"hidden" },
+    cardWarn:    { background:"#1e1015", border:"1px solid rgba(239,68,68,0.3)",    borderRadius:16, overflow:"hidden" },
+    cardPartial: { background:"#1c1216", border:"1px solid rgba(239,68,68,0.22)",   borderRadius:16, overflow:"hidden" },
+    cardLow:     { background:"#1a1808", border:"1px solid rgba(250,204,21,0.3)",   borderRadius:16, overflow:"hidden" },
+    cardPrice:   { background:"#1a1510", border:"1px solid rgba(251,146,60,0.22)",  borderRadius:16, overflow:"hidden" },
     input:  { width:"100%", padding:"11px 14px", borderRadius:10, border:"1px solid rgba(255,255,255,0.1)", fontSize:14, outline:"none", boxSizing:"border-box", background:"rgba(255,255,255,0.05)", color:"white", fontFamily:"'Inter',Arial,sans-serif" },
     label:  { fontSize:11, fontWeight:700, color:"rgba(255,255,255,0.4)", display:"block", marginBottom:5, letterSpacing:"0.06em", textTransform:"uppercase" },
 };
@@ -176,7 +359,8 @@ function mountInventory(canEdit) {
         const p = {
             green:  { background:"rgba(16,185,129,0.15)",  color:"#34d399", border:"1px solid rgba(16,185,129,0.2)" },
             red:    { background:"rgba(239,68,68,0.15)",   color:"#f87171", border:"1px solid rgba(239,68,68,0.2)" },
-            orange: { background:"rgba(245,158,11,0.15)",  color:"#fbbf24", border:"1px solid rgba(245,158,11,0.2)" },
+            orange: { background:"rgba(249,115,22,0.15)",  color:"#fb923c", border:"1px solid rgba(249,115,22,0.25)" },
+            yellow: { background:"rgba(250,204,21,0.15)",  color:"#fde047", border:"1px solid rgba(250,204,21,0.3)" },
             amber:  { background:"rgba(251,191,36,0.18)",  color:"#fde68a", border:"1px solid rgba(251,191,36,0.35)" },
             indigo: { background:"rgba(99,102,241,0.15)",  color:"#a5b4fc", border:"1px solid rgba(99,102,241,0.2)" },
             blue:   { background:"rgba(59,130,246,0.15)",  color:"#93c5fd", border:"1px solid rgba(59,130,246,0.2)" },
@@ -266,21 +450,23 @@ function mountInventory(canEdit) {
     function ItemModal({ modal, flavors, onClose, onSubmit }) {
         const isAdd = modal === "add";
         const [form, setForm] = useState(isAdd
-            ? { name:"", category:"", quantity:"", sellPrice:"", costPrice:"", priceUp:false, saleType:"Loose", flavors:[] }
+            ? { name:"", category:"", quantity:"", sellPrice:"", costPrice:"", boxQuantity:"", boxSellPrice:"", boxCostPrice:"", unitsPerBox:"", priceUp:false, saleType:"Loose", flavors:[] }
             : {
                 name:      modal.item.name,
                 category:  modal.item.category  || "",
                 quantity:  String(modal.item.quantity),
                 sellPrice: modal.item.sellPrice  != null ? String(modal.item.sellPrice) : "",
                 costPrice: modal.item.costPrice  != null ? String(modal.item.costPrice) : "",
-                priceUp:   modal.item.priceUp    || false,
+                boxQuantity:  modal.item.boxQuantity  != null ? String(modal.item.boxQuantity)  : "",
+                boxSellPrice: modal.item.boxSellPrice != null ? String(modal.item.boxSellPrice) : "",
+                boxCostPrice: modal.item.boxCostPrice != null ? String(modal.item.boxCostPrice) : "",
+                unitsPerBox:  modal.item.unitsPerBox  != null ? String(modal.item.unitsPerBox)  : "",
+                priceUp:  modal.item.priceUp    || false,
                 saleType:  modal.item.saleType   || "Loose",
                 flavors:   modal.item.flavors    ? modal.item.flavors.map(f=>({...f})) : [],
             }
         );
         const [flavorSearch, setFlavorSearch] = useState("");
-        const sellF = parseFloat(form.sellPrice), costF = parseFloat(form.costPrice);
-        const margin = (sellF && costF) ? ((sellF - costF) / sellF * 100).toFixed(1) : null;
         const selectedNames  = form.flavors.map(f => f.name);
         const visibleFlavors = flavors.filter(f => f.toLowerCase().includes(flavorSearch.toLowerCase()));
 
@@ -303,6 +489,54 @@ function mountInventory(canEdit) {
             setForm({ ...form, flavors: form.flavors.map(f=>f.name===name?{...f,priceUp:!f.priceUp}:f) });
         }
 
+        // Switching Box <-> Both moves the box numbers so they aren't mistaken for loose ones
+        function setSaleType(type) {
+            const prev = form.saleType;
+            if (prev === type) return;
+            let next = { ...form, saleType:type };
+            if (prev === "Box" && type === "Both")
+                next = { ...next, boxQuantity:form.quantity, boxSellPrice:form.sellPrice, boxCostPrice:form.costPrice, quantity:"", sellPrice:"", costPrice:"" };
+            else if (prev === "Both" && type === "Box")
+                next = { ...next, quantity:form.boxQuantity, sellPrice:form.boxSellPrice, costPrice:form.boxCostPrice, boxQuantity:"", boxSellPrice:"", boxCostPrice:"" };
+            setForm(next);
+        }
+
+        function numInput(label, key, placeholder) {
+            return e("div", null,
+                e("label", { style:S.label }, label),
+                e("input", { type:"number", value:form[key], onChange:ev=>setForm({...form,[key]:ev.target.value}), placeholder, style:S.input })
+            );
+        }
+        function priceInput(label, key) {
+            return e("div", null,
+                e("label", { style:S.label }, label),
+                e("div", { style:{ position:"relative" }},
+                    e("span", { style:{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", color:"rgba(255,255,255,0.3)", fontSize:13, fontWeight:600 }}, "R"),
+                    e("input", { type:"number", value:form[key], onChange:ev=>setForm({...form,[key]:ev.target.value}), placeholder:"0.00", style:{ ...S.input, paddingLeft:26 }})
+                )
+            );
+        }
+        // One block per way the item is sold (loose / box), each with its own qty and prices
+        function unitSection({ title, accent, qtyKey, sellKey, costKey, perBox }) {
+            const m = calcMargin(form[sellKey], form[costKey]);
+            const good = m !== null && parseFloat(m) >= 20;
+            return e("div", { style:{ border:`1px solid ${accent}40`, background:`${accent}0d`, borderRadius:14, padding:"14px 14px 2px", marginBottom:14 }},
+                e("div", { style:{ fontWeight:800, fontSize:13, color:accent, marginBottom:12 }}, title),
+                e("div", { style:{ display:"grid", gridTemplateColumns:perBox?"1fr 1fr":"1fr", gap:10, marginBottom:12 }},
+                    numInput(perBox ? "Boxes in stock" : "Quantity", qtyKey, "0"),
+                    perBox && numInput("Units per box", "unitsPerBox", "e.g. 24")
+                ),
+                e("div", { style:{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:12 }},
+                    priceInput("Selling Price", sellKey),
+                    priceInput("Cost Price", costKey)
+                ),
+                m !== null && e("div", { style:{ background:good?"rgba(16,185,129,0.1)":"rgba(245,158,11,0.1)", border:`1px solid ${good?"rgba(16,185,129,0.2)":"rgba(245,158,11,0.2)"}`, borderRadius:10, padding:"10px 14px", marginBottom:12, display:"flex", justifyContent:"space-between", alignItems:"center" }},
+                    e("span", { style:{ fontSize:12, color:"rgba(255,255,255,0.5)", fontWeight:600 }}, "Profit Margin"),
+                    e("span", { style:{ fontSize:14, fontWeight:800, color:good?"#34d399":"#fbbf24" }}, m + "%")
+                )
+            );
+        }
+
         // Sale type button style
         function saleTypeBtnStyle(type) {
             const active = form.saleType === type;
@@ -321,43 +555,22 @@ function mountInventory(canEdit) {
 
                 e(InputField, { label:"Item Name *",    value:form.name,     onChange:ev=>setForm({...form,name:ev.target.value}),     placeholder:"e.g. Maggi Noodles" }),
                 e(InputField, { label:"Category",       value:form.category, onChange:ev=>setForm({...form,category:ev.target.value}), placeholder:"e.g. Noodles, Sweets, Chips" }),
-                e(InputField, { label:"Total Quantity", value:form.quantity, onChange:ev=>setForm({...form,quantity:ev.target.value}), placeholder:"0", type:"number" }),
-
                 // ── SALE TYPE TOGGLE ─────────────────────────────────────
                 e("div", { style:{ marginBottom:16 }},
                     e("label", { style:S.label }, "Sold As"),
                     e("div", { style:{ display:"flex", gap:8 }},
                         SALE_TYPES.map(type =>
-                            e("button", { key:type, onClick:()=>setForm({...form,saleType:type}), style:saleTypeBtnStyle(type) },
+                            e("button", { key:type, onClick:()=>setSaleType(type), style:saleTypeBtnStyle(type) },
                                 type === "Loose" ? "📦 Loose" : type === "Box" ? "🗃️ Box" : "📦🗃️ Both"
                             )
                         )
                     )
                 ),
 
-                // prices
-                e("div", { style:{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }},
-                    e("div", null,
-                        e("label", { style:S.label }, "Selling Price"),
-                        e("div", { style:{ position:"relative" }},
-                            e("span", { style:{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", color:"rgba(255,255,255,0.3)", fontSize:13, fontWeight:600 }}, "R"),
-                            e("input", { type:"number", value:form.sellPrice, onChange:ev=>setForm({...form,sellPrice:ev.target.value}), placeholder:"0.00", style:{ ...S.input, paddingLeft:26 }})
-                        )
-                    ),
-                    e("div", null,
-                        e("label", { style:S.label }, "Cost Price"),
-                        e("div", { style:{ position:"relative" }},
-                            e("span", { style:{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", color:"rgba(255,255,255,0.3)", fontSize:13, fontWeight:600 }}, "R"),
-                            e("input", { type:"number", value:form.costPrice, onChange:ev=>setForm({...form,costPrice:ev.target.value}), placeholder:"0.00", style:{ ...S.input, paddingLeft:26 }})
-                        )
-                    )
-                ),
-
-                // margin
-                margin !== null && e("div", { style:{ background:parseFloat(margin)>=20?"rgba(16,185,129,0.1)":"rgba(245,158,11,0.1)", border:`1px solid ${parseFloat(margin)>=20?"rgba(16,185,129,0.2)":"rgba(245,158,11,0.2)"}`, borderRadius:10, padding:"10px 14px", marginBottom:14, display:"flex", justifyContent:"space-between", alignItems:"center" }},
-                    e("span", { style:{ fontSize:12, color:"rgba(255,255,255,0.5)", fontWeight:600 }}, "Profit Margin"),
-                    e("span", { style:{ fontSize:14, fontWeight:800, color:parseFloat(margin)>=20?"#34d399":"#fbbf24" }}, margin + "%")
-                ),
+                // ── STOCK + PRICES (separate for loose and box) ─────────
+                form.saleType !== "Box" && unitSection({ title:"📦 Loose — single units", accent:"#60a5fa", qtyKey:"quantity", sellKey:"sellPrice", costKey:"costPrice" }),
+                form.saleType === "Box" && unitSection({ title:"🗃️ Whole Box", accent:"#a78bfa", qtyKey:"quantity", sellKey:"sellPrice", costKey:"costPrice", perBox:true }),
+                form.saleType === "Both" && unitSection({ title:"🗃️ Whole Box", accent:"#a78bfa", qtyKey:"boxQuantity", sellKey:"boxSellPrice", costKey:"boxCostPrice", perBox:true }),
 
                 // toggles
                 e(ToggleRow, { on:form.priceUp, onClick:()=>setForm({...form,priceUp:!form.priceUp}), label:"Item Price Increased", sub:"Flag this item's overall price went up" }),
@@ -448,17 +661,25 @@ function mountInventory(canEdit) {
 
         function handleSubmit(form) {
             if (!form.name.trim()) return showToast("⚠️ Item name is required");
-            const qty = parseInt(form.quantity);
+            const isBoth = form.saleType === "Both";
+            const qty    = isBoth && form.quantity === "" ? 0 : parseInt(form.quantity);
+            const boxQty = form.boxQuantity === "" ? 0 : parseInt(form.boxQuantity);
             if (isNaN(qty) || qty < 0) return showToast("⚠️ Enter a valid quantity");
+            if (isBoth && (isNaN(boxQty) || boxQty < 0)) return showToast("⚠️ Enter a valid box quantity");
             const base = {
                 name:       form.name.trim(),
                 category:   form.category.trim(),
                 quantity:   qty,
                 sellPrice:  form.sellPrice ? parseFloat(form.sellPrice) : null,
                 costPrice:  form.costPrice ? parseFloat(form.costPrice) : null,
+                // box stock/prices only used when sold as "Both" (a "Box"-only item uses the fields above)
+                boxQuantity:  isBoth ? boxQty : null,
+                boxSellPrice: isBoth && form.boxSellPrice ? parseFloat(form.boxSellPrice) : null,
+                boxCostPrice: isBoth && form.boxCostPrice ? parseFloat(form.boxCostPrice) : null,
+                unitsPerBox:  form.saleType !== "Loose" && form.unitsPerBox ? parseInt(form.unitsPerBox) : null,
                 priceUp:    form.priceUp,
                 saleType:   form.saleType || "Loose",
-                outOfStock: qty === 0,
+                outOfStock: isBoth ? (qty === 0 && boxQty === 0) : qty === 0,
                 flavors:    form.flavors.length > 0 ? form.flavors : null,
             };
             if (!db) return showToast("⚠️ No database — upload to GitHub first");
@@ -475,7 +696,11 @@ function mountInventory(canEdit) {
         function toggleOutOfStock(item) {
             if (!db) return;
             const nowOos = !item.outOfStock;
-            db.ref("items/" + item.id).update({ outOfStock: nowOos, quantity: nowOos ? 0 : item.quantity });
+            db.ref("items/" + item.id).update({
+                outOfStock: nowOos,
+                quantity: nowOos ? 0 : item.quantity,
+                ...(item.saleType === "Both" && nowOos ? { boxQuantity: 0 } : {}),
+            });
             showToast(nowOos ? `🔴 "${item.name}" marked finished` : `🟢 "${item.name}" back in stock`);
         }
 
@@ -498,6 +723,7 @@ function mountInventory(canEdit) {
             if (!m) return false;
             if (filter==="instock")  return !item.outOfStock;
             if (filter==="finished") return  item.outOfStock;
+            if (filter==="low")      return  isLowStock(item);
             if (filter==="priceup")  return  item.priceUp;
             return true;
         });
@@ -505,17 +731,10 @@ function mountInventory(canEdit) {
         const stats = {
             total:    items.length,
             inStock:  items.filter(i=>!i.outOfStock).length,
+            low:      items.filter(isLowStock).length,
             finished: items.filter(i=> i.outOfStock).length,
             priceUp:  items.filter(i=> i.priceUp).length,
         };
-
-        // Sale type display helper
-        function saleTypeBadge(type) {
-            if (!type || type === "Loose") return e(Badge, {color:"blue"}, "📦 Loose");
-            if (type === "Box")            return e(Badge, {color:"indigo"}, "🗃️ Box");
-            if (type === "Both")           return e(Badge, {color:"pink"}, "📦🗃️ Both");
-            return null;
-        }
 
         return e("div", { style:{ minHeight:"100vh", background:"#0f0f13", fontFamily:"'Inter',Arial,sans-serif", paddingBottom:80 }},
 
@@ -524,44 +743,33 @@ function mountInventory(canEdit) {
                 e("div", { style:{ maxWidth:720, margin:"0 auto" }},
                     e("div", { style:{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }},
 
-                        // LEFT: back button (editor) or logo
-                        e("div", { style:{ display:"flex", alignItems:"center", gap:10 }},
-                            // ── BACK BUTTON — only for editor ─────────────
-                            canEdit && e("button", {
-                                onClick: () => {
-                                    if (window.confirm("Go back to login screen?")) {
-                                        document.getElementById("content").style.display = "none";
-                                        document.getElementById("login-gate").style.display = "flex";
-                                        document.getElementById("pass-field").value = "";
-                                        document.getElementById("error-msg").style.display = "none";
-                                    }
-                                },
-                                title: "Back to login",
-                                style:{ background:"rgba(255,255,255,0.07)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:10, width:36, height:36, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:16, flexShrink:0 }
-                            }, "←"),
-
+                        // LEFT: logo
+                        e("div", { style:{ display:"flex", alignItems:"center", gap:10, minWidth:0 }},
                             // logo + name
                             e("div", { style:{ display:"flex", alignItems:"center", gap:10 }},
                                 e("div", { style:{ width:36, height:36, background:"linear-gradient(135deg,#f59e0b,#ef4444)", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, boxShadow:"0 4px 12px rgba(245,158,11,0.3)", flexShrink:0 }}, "🛒"),
                                 e("div", null,
                                     e("div", { style:{ fontSize: canEdit ? 13 : 14, fontWeight:900, color:"white", letterSpacing:"-0.3px", lineHeight:1.2 }}, "SANKA CASH AND CARRY"),
                                     e("div", { style:{ fontSize:10, fontWeight:500, color:canEdit?"rgba(245,158,11,0.8)":"rgba(52,211,153,0.7)", marginTop:1 }},
-                                        canEdit ? "✏️ Editor Mode" : "👁 View Only — Live Stock"
+                                        canEdit ? "✏️ Editor Mode" : "🟢 Live Stock Catalogue"
                                     )
                                 )
                             )
                         ),
 
-                        // RIGHT: action buttons (editor only)
-                        canEdit && e("div", { style:{ display:"flex", gap:7 }},
-                            e("button", { onClick:()=>setShowFlavorMgr(true), style:{ background:"rgba(255,255,255,0.06)", color:"rgba(255,255,255,0.7)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:10, padding:"8px 12px", fontWeight:700, fontSize:11, cursor:"pointer" }}, "🎨"),
-                            e("button", { onClick:()=>setModal("add"), style:{ background:"linear-gradient(135deg,#f59e0b,#f97316)", color:"#1a1a2e", border:"none", borderRadius:10, padding:"8px 14px", fontWeight:800, fontSize:12, cursor:"pointer", boxShadow:"0 4px 12px rgba(245,158,11,0.25)" }}, "+ Add")
-                        )
+                        // RIGHT: staff login (customers) or editor actions + log out
+                        canEdit
+                            ? e("div", { style:{ display:"flex", gap:7 }},
+                                e("button", { onClick:()=>setShowFlavorMgr(true), title:"Manage flavors", style:{ background:"rgba(255,255,255,0.06)", color:"rgba(255,255,255,0.7)", border:"1px solid rgba(255,255,255,0.1)", borderRadius:10, padding:"8px 12px", fontWeight:700, fontSize:11, cursor:"pointer" }}, "🎨"),
+                                e("button", { onClick:()=>setModal("add"), style:{ background:"linear-gradient(135deg,#f59e0b,#f97316)", color:"#1a1a2e", border:"none", borderRadius:10, padding:"8px 14px", fontWeight:800, fontSize:12, cursor:"pointer", boxShadow:"0 4px 12px rgba(245,158,11,0.25)" }}, "+ Add"),
+                                e("button", { onClick:()=>{ if (window.confirm("Log out of editor mode?")) logout(); }, title:"Log out", style:{ background:"rgba(239,68,68,0.1)", color:"#f87171", border:"1px solid rgba(239,68,68,0.25)", borderRadius:10, padding:"8px 12px", fontWeight:700, fontSize:12, cursor:"pointer" }}, "⎋")
+                              )
+                            : e("button", { onClick:openLogin, title:"Staff login", style:{ background:"rgba(255,255,255,0.06)", color:"rgba(255,255,255,0.75)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:999, padding:"8px 14px", fontWeight:700, fontSize:12, cursor:"pointer", whiteSpace:"nowrap", flexShrink:0, fontFamily:"'Inter',Arial,sans-serif" }}, "🔒 Staff login")
                     ),
 
                     // stats row
                     e("div", { style:{ display:"flex", gap:7, flexWrap:"wrap" }},
-                        [{label:"Total",value:stats.total,color:"rgba(255,255,255,0.5)"},{label:"In Stock",value:stats.inStock,color:"#34d399"},{label:"Finished",value:stats.finished,color:"#f87171"},{label:"Price ↑",value:stats.priceUp,color:"#fbbf24"}]
+                        [{label:"Total",value:stats.total,color:"rgba(255,255,255,0.5)"},{label:"In Stock",value:stats.inStock,color:"#34d399"},{label:"Low (<10)",value:stats.low,color:"#facc15"},{label:"Finished",value:stats.finished,color:"#f87171"},{label:"Price ↑",value:stats.priceUp,color:"#fb923c"}]
                         .map(s => e("div", { key:s.label, style:{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:10, padding:"6px 12px", display:"flex", gap:7, alignItems:"center" }},
                             e("span", { style:{ fontSize:16, fontWeight:900, color:s.color }}, s.value),
                             e("span", { style:{ fontSize:10, color:"rgba(255,255,255,0.35)", fontWeight:600 }}, s.label)
@@ -577,6 +785,7 @@ function mountInventory(canEdit) {
                     e("select", { value:filter, onChange:ev=>setFilter(ev.target.value), style:{ padding:"11px 12px", borderRadius:12, border:"1px solid rgba(255,255,255,0.08)", fontSize:12, background:"#1a1a24", color:"rgba(255,255,255,0.7)", cursor:"pointer", outline:"none", fontFamily:"'Inter',Arial,sans-serif" }},
                         e("option",{value:"all"},"All Items"),
                         e("option",{value:"instock"},"In Stock"),
+                        e("option",{value:"low"},"Low Stock (<10)"),
                         e("option",{value:"finished"},"Finished"),
                         e("option",{value:"priceup"},"Price Increased")
                     )
@@ -604,19 +813,20 @@ function mountInventory(canEdit) {
                         const priceUpFlavors = hasFlavors ? item.flavors.filter(f=>f.priceUp).length : 0;
                         const hasPartialFlavorWarn = !item.outOfStock && hasFlavors && finishedCount > 0;
 
-                        const cardStyle = item.outOfStock
-                            ? S.cardWarn
-                            : hasPartialFlavorWarn
-                                ? S.cardFlavorWarn
-                                : item.priceUp
-                                    ? S.cardPrice
-                                    : S.card;
+                        // each way the item is sold gets its own chip (qty + price) on the same card
+                        const units = getUnits(item);
+                        // red = finished (whole item, a loose/box unit, or a flavor); yellow = under 10 left
+                        const partFinished = !item.outOfStock && (hasPartialFlavorWarn || units.some(u => u.qty === 0));
+                        const low = isLowStock(item);
 
-                        const dotColor = item.outOfStock ? "#ef4444" : hasPartialFlavorWarn ? "#f59e0b" : "#10b981";
-                        const dotShadow = item.outOfStock ? "rgba(239,68,68,0.15)" : hasPartialFlavorWarn ? "rgba(245,158,11,0.2)" : "rgba(16,185,129,0.15)";
+                        const cardStyle = item.outOfStock ? S.cardWarn
+                            : partFinished ? S.cardPartial
+                            : low          ? S.cardLow
+                            : item.priceUp ? S.cardPrice
+                            : S.card;
 
-                        const margin = (item.sellPrice && item.costPrice)
-                            ? ((item.sellPrice - item.costPrice) / item.sellPrice * 100).toFixed(1) : null;
+                        const dotColor  = (item.outOfStock || partFinished) ? "#ef4444" : low ? "#facc15" : "#10b981";
+                        const dotShadow = (item.outOfStock || partFinished) ? "rgba(239,68,68,0.18)" : low ? "rgba(250,204,21,0.2)" : "rgba(16,185,129,0.15)";
 
                         return e("div", { key:item.id, style:cardStyle },
                             e("div", { style:{ padding:"13px 14px", display:"flex", alignItems:"center", gap:11 }},
@@ -629,22 +839,32 @@ function mountInventory(canEdit) {
                                         e("span", { style:{ fontWeight:700, fontSize:15, color:item.outOfStock?"rgba(255,255,255,0.35)":"white", textDecoration:item.outOfStock?"line-through":"none", letterSpacing:"-0.2px" }}, item.name),
                                         item.priceUp    && e(Badge,{color:"orange"}, "Price ↑"),
                                         item.outOfStock && e(Badge,{color:"red"},    "Finished"),
-                                        hasPartialFlavorWarn && e(Badge,{color:"amber"}, `⚠️ ${finishedCount} flavor${finishedCount>1?"s":""} finished`),
+                                        hasPartialFlavorWarn && e(Badge,{color:"red"}, `${finishedCount} flavor${finishedCount>1?"s":""} finished`),
+                                        low && e(Badge,{color:"yellow"}, "Low stock"),
                                         priceUpFlavors > 0 && e(Badge,{color:"orange"}, `💰 ${priceUpFlavors} flavor${priceUpFlavors>1?"s":""} price ↑`)
                                     ),
                                     e("div", { style:{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }},
                                         item.category && e("span", { style:{ fontSize:11, color:"rgba(255,255,255,0.35)", fontWeight:500 }}, "📁 "+item.category),
-                                        // sale type badge
-                                        saleTypeBadge(item.saleType),
-                                        e("span", { style:{ fontSize:11, fontWeight:item.quantity<=3?700:500, color:(item.quantity<=3&&!item.outOfStock)?"#f87171":"rgba(255,255,255,0.45)" }},
-                                            "Qty: "+item.quantity+(item.quantity<=3&&item.quantity>0?" ⚠️":"")
-                                        ),
-                                        // sell price — visible to all
-                                        item.sellPrice != null && e("span", { style:{ fontSize:11, color:"#34d399", fontWeight:700, background:"rgba(16,185,129,0.1)", border:"1px solid rgba(16,185,129,0.15)", borderRadius:6, padding:"1px 7px" }}, "R"+item.sellPrice.toFixed(2)),
-                                        // cost price + margin — editors only
-                                        canEdit && item.costPrice != null && e("span", { style:{ fontSize:11, color:"#a5b4fc", fontWeight:700, background:"rgba(99,102,241,0.1)", border:"1px solid rgba(99,102,241,0.15)", borderRadius:6, padding:"1px 7px" }}, "Cost R"+item.costPrice.toFixed(2)),
-                                        canEdit && margin && e("span", { style:{ fontSize:11, color:parseFloat(margin)>=20?"#34d399":"#fbbf24", fontWeight:700 }}, margin+"% margin"),
                                         hasFlavors && e("button", { onClick:()=>setExpandedId(isExpanded?null:item.id), style:{ background:"rgba(99,102,241,0.12)", border:"1px solid rgba(99,102,241,0.2)", borderRadius:999, padding:"2px 9px", fontSize:10, fontWeight:700, color:"#a5b4fc", cursor:"pointer" }}, `🎨 ${availCount}/${item.flavors.length} ${isExpanded?"▲":"▼"}`)
+                                    ),
+                                    // loose / box chips — separate qty & price, side by side
+                                    e("div", { style:{ display:"flex", gap:6, flexWrap:"wrap", marginTop:7 }},
+                                        units.map(u => {
+                                            const done  = u.qty === 0;
+                                            const uLow  = isLowQty(u.qty);
+                                            const m     = calcMargin(u.sell, u.cost);
+                                            const bg     = done ? "rgba(239,68,68,0.1)"  : uLow ? "rgba(250,204,21,0.1)"  : `${u.accent}14`;
+                                            const border = done ? "rgba(239,68,68,0.35)" : uLow ? "rgba(250,204,21,0.35)" : u.accent+"40";
+                                            return e("div", { key:u.key, style:{ display:"flex", alignItems:"center", gap:7, flexWrap:"wrap", background:bg, border:`1px solid ${border}`, borderRadius:10, padding:"5px 10px" }},
+                                                e("span", { style:{ fontSize:11, fontWeight:800, color:done?"#f87171":uLow?"#facc15":u.accent }}, u.label + (u.per ? ` ×${u.per}` : "")),
+                                                e("span", { style:{ fontSize:11, fontWeight:(done||uLow)?700:500, color:done?"#f87171":uLow?"#fde047":"rgba(255,255,255,0.55)" }}, done ? "Finished" : `Qty ${u.qty}${uLow?" ⚠️":""}`),
+                                                // sell price — visible to all
+                                                u.sell != null && e("span", { style:{ fontSize:12, fontWeight:800, color:"#34d399" }}, "R"+u.sell.toFixed(2)),
+                                                // cost + margin — editors only
+                                                canEdit && u.cost != null && e("span", { style:{ fontSize:10, fontWeight:700, color:"#a5b4fc" }}, "cost R"+u.cost.toFixed(2)),
+                                                canEdit && m && e("span", { style:{ fontSize:10, fontWeight:700, color:parseFloat(m)>=20?"#34d399":"#fbbf24" }}, m+"%")
+                                            );
+                                        })
                                     )
                                 ),
 
@@ -660,13 +880,20 @@ function mountInventory(canEdit) {
                             isExpanded && hasFlavors && e("div", { style:{ borderTop:"1px solid rgba(255,255,255,0.06)", padding:"12px 14px 14px", background:"rgba(0,0,0,0.2)" }},
                                 e("div", { style:{ fontSize:10, fontWeight:700, color:"rgba(255,255,255,0.3)", marginBottom:8, letterSpacing:"0.08em", textTransform:"uppercase" }}, "Flavors"),
                                 e("div", { style:{ display:"flex", flexWrap:"wrap", gap:6 }},
-                                    item.flavors.map(f => e("div", { key:f.name, style:{ display:"flex", alignItems:"center", gap:5, background:f.outOfStock?"rgba(239,68,68,0.12)":f.priceUp?"rgba(245,158,11,0.12)":"rgba(16,185,129,0.12)", border:`1px solid ${f.outOfStock?"rgba(239,68,68,0.2)":f.priceUp?"rgba(245,158,11,0.35)":"rgba(16,185,129,0.2)"}`, borderRadius:999, padding:"4px 11px" }},
-                                        e("div", { style:{ width:6, height:6, borderRadius:"50%", background:f.outOfStock?"#ef4444":f.priceUp?"#f59e0b":"#10b981", flexShrink:0 }}),
-                                        e("span", { style:{ fontSize:12, fontWeight:700, color:f.outOfStock?"#f87171":f.priceUp?"#fbbf24":"#34d399" }}, f.name),
-                                        e("span", { style:{ fontSize:10, fontWeight:600, color:f.outOfStock?"rgba(248,113,113,0.7)":f.priceUp?"rgba(251,191,36,0.8)":"rgba(52,211,153,0.7)" }},
-                                            f.outOfStock ? "· Finished" : f.priceUp ? "· Price ↑" : `· ${f.quantity} left`
-                                        )
-                                    ))
+                                    item.flavors.map(f => {
+                                        // red = finished, yellow = under 10 left, orange = price up, green = fine
+                                        const c = f.outOfStock          ? { bg:"rgba(239,68,68,0.12)",  bd:"rgba(239,68,68,0.3)",   dot:"#ef4444", tx:"#f87171", sub:"rgba(248,113,113,0.75)" }
+                                                : isLowQty(f.quantity) ? { bg:"rgba(250,204,21,0.12)", bd:"rgba(250,204,21,0.35)", dot:"#facc15", tx:"#fde047", sub:"rgba(253,224,71,0.75)" }
+                                                : f.priceUp            ? { bg:"rgba(249,115,22,0.12)", bd:"rgba(249,115,22,0.35)", dot:"#f97316", tx:"#fb923c", sub:"rgba(251,146,60,0.8)" }
+                                                :                        { bg:"rgba(16,185,129,0.12)", bd:"rgba(16,185,129,0.2)",  dot:"#10b981", tx:"#34d399", sub:"rgba(52,211,153,0.7)" };
+                                        return e("div", { key:f.name, style:{ display:"flex", alignItems:"center", gap:5, background:c.bg, border:`1px solid ${c.bd}`, borderRadius:999, padding:"4px 11px" }},
+                                            e("div", { style:{ width:6, height:6, borderRadius:"50%", background:c.dot, flexShrink:0 }}),
+                                            e("span", { style:{ fontSize:12, fontWeight:700, color:c.tx }}, f.name),
+                                            e("span", { style:{ fontSize:10, fontWeight:600, color:c.sub }},
+                                                f.outOfStock ? "· Finished" : `· ${f.quantity} left${f.priceUp ? " · Price ↑" : ""}`
+                                            )
+                                        );
+                                    })
                                 )
                             )
                         );
@@ -698,6 +925,9 @@ function mountInventory(canEdit) {
 
     ReactDOM.render(React.createElement(App), document.getElementById("inventory-root"));
 }
+
+// show the customer catalogue straight away
+mountInventory(false);
 </script>
 </body>
 </html>
