@@ -733,7 +733,6 @@ function mountInventory(canEdit) {
             inStock:  items.filter(i=>!i.outOfStock).length,
             low:      items.filter(isLowStock).length,
             finished: items.filter(i=> i.outOfStock).length,
-            priceUp:  items.filter(i=> i.priceUp).length,
         };
 
         return e("div", { style:{ minHeight:"100vh", background:"#0f0f13", fontFamily:"'Inter',Arial,sans-serif", paddingBottom:80 }},
@@ -769,7 +768,7 @@ function mountInventory(canEdit) {
 
                     // stats row
                     e("div", { style:{ display:"flex", gap:7, flexWrap:"wrap" }},
-                        [{label:"Total",value:stats.total,color:"rgba(255,255,255,0.5)"},{label:"In Stock",value:stats.inStock,color:"#34d399"},{label:"Low (<10)",value:stats.low,color:"#facc15"},{label:"Finished",value:stats.finished,color:"#f87171"},{label:"Price ↑",value:stats.priceUp,color:"#fb923c"}]
+                        [{label:"Total",value:stats.total,color:"rgba(255,255,255,0.5)"},{label:"In Stock",value:stats.inStock,color:"#34d399"},{label:"Running Low",value:stats.low,color:"#facc15"},{label:"Finished",value:stats.finished,color:"#f87171"}]
                         .map(s => e("div", { key:s.label, style:{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:10, padding:"6px 12px", display:"flex", gap:7, alignItems:"center" }},
                             e("span", { style:{ fontSize:16, fontWeight:900, color:s.color }}, s.value),
                             e("span", { style:{ fontSize:10, color:"rgba(255,255,255,0.35)", fontWeight:600 }}, s.label)
@@ -785,7 +784,7 @@ function mountInventory(canEdit) {
                     e("select", { value:filter, onChange:ev=>setFilter(ev.target.value), style:{ padding:"11px 12px", borderRadius:12, border:"1px solid rgba(255,255,255,0.08)", fontSize:12, background:"#1a1a24", color:"rgba(255,255,255,0.7)", cursor:"pointer", outline:"none", fontFamily:"'Inter',Arial,sans-serif" }},
                         e("option",{value:"all"},"All Items"),
                         e("option",{value:"instock"},"In Stock"),
-                        e("option",{value:"low"},"Low Stock (<10)"),
+                        e("option",{value:"low"},"Running Low (under 10)"),
                         e("option",{value:"finished"},"Finished"),
                         e("option",{value:"priceup"},"Price Increased")
                     )
@@ -840,7 +839,7 @@ function mountInventory(canEdit) {
                                         item.priceUp    && e(Badge,{color:"orange"}, "Price ↑"),
                                         item.outOfStock && e(Badge,{color:"red"},    "Finished"),
                                         hasPartialFlavorWarn && e(Badge,{color:"red"}, `${finishedCount} flavor${finishedCount>1?"s":""} finished`),
-                                        low && e(Badge,{color:"yellow"}, "Low stock"),
+                                        low && e(Badge,{color:"yellow"}, "Running low"),
                                         priceUpFlavors > 0 && e(Badge,{color:"orange"}, `💰 ${priceUpFlavors} flavor${priceUpFlavors>1?"s":""} price ↑`)
                                     ),
                                     e("div", { style:{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }},
