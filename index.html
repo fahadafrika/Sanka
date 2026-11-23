@@ -207,6 +207,7 @@
         /* soft ambient colour behind the list so the glass has something to refract */
         body::before {
             content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+            transform: translateZ(0);          /* own layer: no repaint while scrolling */
             background:
                 radial-gradient(40vmax 40vmax at 10% 15%, rgba(16,185,129,0.16), transparent 70%),
                 radial-gradient(35vmax 35vmax at 90% 45%, rgba(250,204,21,0.12), transparent 70%),
@@ -220,14 +221,18 @@
             background:
                 linear-gradient(135deg, rgba(var(--tint),0.30), rgba(var(--tint),0.10) 55%, rgba(var(--tint),0.18));
             border: 1px solid rgba(var(--tint),0.40);
-            backdrop-filter: blur(18px) saturate(170%);
-            -webkit-backdrop-filter: blur(18px) saturate(170%);
+            /* no backdrop-filter: blurring every card each frame is what made scrolling lag on phones */
             box-shadow:
                 inset 0 1px 0 rgba(255,255,255,0.28),      /* top rim highlight */
                 inset 0 -1px 0 rgba(255,255,255,0.05),
                 inset 0 0 24px rgba(var(--tint),0.12),     /* inner glow */
-                0 8px 24px rgba(0,0,0,0.28);
-            transition: transform 0.35s cubic-bezier(.2,.9,.3,1.3), box-shadow 0.3s, border-color 0.3s;
+                0 6px 18px rgba(0,0,0,0.25);
+            contain: layout paint;
+            /* stop taps on the text from selecting it / opening Google "Touch to Search" */
+            -webkit-user-select: none; user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
+            transition: transform 0.18s cubic-bezier(.2,.9,.3,1.2);
         }
         /* glossy sheen across the top half */
         .glass-card::before {
@@ -238,19 +243,16 @@
         .glass-card::after {
             content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
             background: radial-gradient(220px circle at var(--mx) var(--my), rgba(255,255,255,0.20), transparent 60%);
-            opacity: 0; transition: opacity 0.3s;
+            opacity: 0; transition: opacity 0.15s;
         }
-        .glass-card:hover::after, .glass-card.glass-touch::after { opacity: 1; }
-        .glass-card:hover {
-            transform: translateY(-2px) scale(1.008);
-            border-color: rgba(var(--tint),0.6);
-            box-shadow:
-                inset 0 1px 0 rgba(255,255,255,0.35),
-                inset 0 -1px 0 rgba(255,255,255,0.06),
-                inset 0 0 30px rgba(var(--tint),0.18),
-                0 14px 34px rgba(0,0,0,0.35), 0 0 0 1px rgba(var(--tint),0.12);
+        /* mouse: light follows the cursor and the card lifts */
+        @media (hover: hover) and (pointer: fine) {
+            .glass-card:hover::after { opacity: 1; }
+            .glass-card:hover { transform: translateY(-2px); }
         }
-        .glass-card:active { transform: scale(0.985); transition-duration: 0.12s; }
+        /* touch / click: quick press-in with a flash of light */
+        .glass-card:active { transform: scale(0.985); transition-duration: 0.08s; }
+        .glass-card:active::after { opacity: 1; transition-duration: 0s; }
 
         .glass-green  { --tint: 16,185,129; }   /* in stock */
         .glass-yellow { --tint: 234,179,8;  }   /* running low */
@@ -429,20 +431,24 @@ if (auth) {
 }
 
 // ─── LIQUID GLASS: light follows the pointer across stock cards ───────────────
-function moveGlassLight(ev) {
-    const card = ev.target.closest && ev.target.closest(".glass-card");
+// Updates at most once per frame; touch only sets the spot where the finger lands
+let glassFrame = 0, glassEv = null;
+function applyGlassLight() {
+    glassFrame = 0;
+    const ev = glassEv;
+    const card = ev && ev.target.closest && ev.target.closest(".glass-card");
     if (!card) return;
     const r = card.getBoundingClientRect();
     card.style.setProperty("--mx", (ev.clientX - r.left) + "px");
     card.style.setProperty("--my", (ev.clientY - r.top) + "px");
-    if (ev.pointerType === "touch") card.classList.add("glass-touch");
 }
-document.addEventListener("pointermove", moveGlassLight, { passive: true });
-document.addEventListener("pointerdown", moveGlassLight, { passive: true });
-document.addEventListener("pointerup", ev => {
-    const card = ev.target.closest && ev.target.closest(".glass-card");
-    if (card) setTimeout(() => card.classList.remove("glass-touch"), 350);
-}, { passive: true });
+function queueGlassLight(ev) {
+    if (ev.type === "pointermove" && ev.pointerType !== "mouse") return;
+    glassEv = ev;
+    if (!glassFrame) glassFrame = requestAnimationFrame(applyGlassLight);
+}
+document.addEventListener("pointermove", queueGlassLight, { passive: true });
+document.addEventListener("pointerdown", queueGlassLight, { passive: true });
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const DEFAULT_FLAVORS = [
