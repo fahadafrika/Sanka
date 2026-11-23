@@ -203,6 +203,62 @@
             box-shadow: 0 0 0 2px rgba(255,255,255,0.15), 0 2px 8px rgba(65,137,221,0.5);
         }
 
+        /* ── LIQUID GLASS STOCK CARDS ───────────────────────────────── */
+        /* soft ambient colour behind the list so the glass has something to refract */
+        body::before {
+            content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+            background:
+                radial-gradient(40vmax 40vmax at 10% 15%, rgba(16,185,129,0.16), transparent 70%),
+                radial-gradient(35vmax 35vmax at 90% 45%, rgba(250,204,21,0.12), transparent 70%),
+                radial-gradient(40vmax 40vmax at 30% 95%, rgba(239,68,68,0.14), transparent 70%);
+        }
+        .glass-card {
+            --tint: 16,185,129;               /* r,g,b — set per status below */
+            --mx: 50%; --my: 0%;              /* pointer position, set by JS */
+            position: relative; isolation: isolate;
+            border-radius: 18px; overflow: hidden;
+            background:
+                linear-gradient(135deg, rgba(var(--tint),0.30), rgba(var(--tint),0.10) 55%, rgba(var(--tint),0.18));
+            border: 1px solid rgba(var(--tint),0.40);
+            backdrop-filter: blur(18px) saturate(170%);
+            -webkit-backdrop-filter: blur(18px) saturate(170%);
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.28),      /* top rim highlight */
+                inset 0 -1px 0 rgba(255,255,255,0.05),
+                inset 0 0 24px rgba(var(--tint),0.12),     /* inner glow */
+                0 8px 24px rgba(0,0,0,0.28);
+            transition: transform 0.35s cubic-bezier(.2,.9,.3,1.3), box-shadow 0.3s, border-color 0.3s;
+        }
+        /* glossy sheen across the top half */
+        .glass-card::before {
+            content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+            background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.02) 45%, transparent 60%);
+        }
+        /* light that follows the finger / mouse */
+        .glass-card::after {
+            content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+            background: radial-gradient(220px circle at var(--mx) var(--my), rgba(255,255,255,0.20), transparent 60%);
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .glass-card:hover::after, .glass-card.glass-touch::after { opacity: 1; }
+        .glass-card:hover {
+            transform: translateY(-2px) scale(1.008);
+            border-color: rgba(var(--tint),0.6);
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.35),
+                inset 0 -1px 0 rgba(255,255,255,0.06),
+                inset 0 0 30px rgba(var(--tint),0.18),
+                0 14px 34px rgba(0,0,0,0.35), 0 0 0 1px rgba(var(--tint),0.12);
+        }
+        .glass-card:active { transform: scale(0.985); transition-duration: 0.12s; }
+
+        .glass-green  { --tint: 16,185,129; }   /* in stock */
+        .glass-yellow { --tint: 234,179,8;  }   /* running low */
+        .glass-red    { --tint: 239,68,68;  }   /* finished / something missing */
+
+        @media (prefers-reduced-motion: reduce) {
+            .glass-card, .glass-card:hover, .glass-card:active { transition: none; transform: none; }
+        }
         @media (prefers-reduced-motion: reduce) {
             .blob, .login-logo, .live-dot::after, .login-box { animation: none; }
         }
@@ -372,6 +428,22 @@ if (auth) {
     });
 }
 
+// ─── LIQUID GLASS: light follows the pointer across stock cards ───────────────
+function moveGlassLight(ev) {
+    const card = ev.target.closest && ev.target.closest(".glass-card");
+    if (!card) return;
+    const r = card.getBoundingClientRect();
+    card.style.setProperty("--mx", (ev.clientX - r.left) + "px");
+    card.style.setProperty("--my", (ev.clientY - r.top) + "px");
+    if (ev.pointerType === "touch") card.classList.add("glass-touch");
+}
+document.addEventListener("pointermove", moveGlassLight, { passive: true });
+document.addEventListener("pointerdown", moveGlassLight, { passive: true });
+document.addEventListener("pointerup", ev => {
+    const card = ev.target.closest && ev.target.closest(".glass-card");
+    if (card) setTimeout(() => card.classList.remove("glass-touch"), 350);
+}, { passive: true });
+
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const DEFAULT_FLAVORS = [
     "Durban Curry","Chicken","Beef","Original","Cheese",
@@ -405,11 +477,6 @@ function isLowStock(item) {
 }
 
 const S = {
-    card:        { background:"#1a1a24", border:"1px solid rgba(255,255,255,0.08)", borderRadius:16, overflow:"hidden" },
-    cardWarn:    { background:"#1e1015", border:"1px solid rgba(239,68,68,0.3)",    borderRadius:16, overflow:"hidden" },
-    cardPartial: { background:"#1c1216", border:"1px solid rgba(239,68,68,0.22)",   borderRadius:16, overflow:"hidden" },
-    cardLow:     { background:"#1a1808", border:"1px solid rgba(250,204,21,0.3)",   borderRadius:16, overflow:"hidden" },
-    cardPrice:   { background:"#1a1510", border:"1px solid rgba(251,146,60,0.22)",  borderRadius:16, overflow:"hidden" },
     input:  { width:"100%", padding:"11px 14px", borderRadius:10, border:"1px solid rgba(255,255,255,0.1)", fontSize:14, outline:"none", boxSizing:"border-box", background:"rgba(255,255,255,0.05)", color:"white", fontFamily:"'Inter',Arial,sans-serif" },
     label:  { fontSize:11, fontWeight:700, color:"rgba(255,255,255,0.4)", display:"block", marginBottom:5, letterSpacing:"0.06em", textTransform:"uppercase" },
 };
@@ -805,7 +872,7 @@ function mountInventory(canEdit) {
             finished: items.filter(i=> i.outOfStock).length,
         };
 
-        return e("div", { style:{ minHeight:"100vh", background:"#0f0f13", fontFamily:"'Inter',Arial,sans-serif", paddingBottom:80 }},
+        return e("div", { style:{ minHeight:"100vh", background:"transparent", fontFamily:"'Inter',Arial,sans-serif", paddingBottom:80 }},
 
             // ── HEADER ────────────────────────────────────────────────────
             e("div", { style:{ background:"rgba(22,22,31,0.95)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(255,255,255,0.06)", padding:"16px 20px", position:"sticky", top:0, zIndex:100 }},
@@ -888,16 +955,13 @@ function mountInventory(canEdit) {
                         const partFinished = !item.outOfStock && (hasPartialFlavorWarn || units.some(u => u.qty === 0));
                         const low = isLowStock(item);
 
-                        const cardStyle = item.outOfStock ? S.cardWarn
-                            : partFinished ? S.cardPartial
-                            : low          ? S.cardLow
-                            : item.priceUp ? S.cardPrice
-                            : S.card;
+                        // liquid glass card: red = finished/missing, yellow = running low, green = in stock
+                        const cardClass = "glass-card " + ((item.outOfStock || partFinished) ? "glass-red" : low ? "glass-yellow" : "glass-green");
 
                         const dotColor  = (item.outOfStock || partFinished) ? "#ef4444" : low ? "#facc15" : "#10b981";
                         const dotShadow = (item.outOfStock || partFinished) ? "rgba(239,68,68,0.18)" : low ? "rgba(250,204,21,0.2)" : "rgba(16,185,129,0.15)";
 
-                        return e("div", { key:item.id, style:cardStyle },
+                        return e("div", { key:item.id, className:cardClass },
                             e("div", { style:{ padding:"13px 14px", display:"flex", alignItems:"center", gap:11 }},
                                 // dot
                                 e("div", { style:{ width:10, height:10, borderRadius:"50%", background:dotColor, flexShrink:0, boxShadow:`0 0 0 3px ${dotShadow}` }}),
