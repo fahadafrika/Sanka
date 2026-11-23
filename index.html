@@ -482,6 +482,35 @@ function isLowStock(item) {
     return !item.outOfStock && getUnits(item).some(u => isLowQty(u.qty));
 }
 
+// ─── ITEM PHOTOS ──────────────────────────────────────────────────────────────
+// Photos are shrunk in the browser and saved as small JPEGs under /itemImages/<itemId>,
+// separate from /items so the stock list stays quick to load.
+const IMAGE_MAX_SIDE = 480;
+function compressImage(file) {
+    return new Promise((resolve, reject) => {
+        if (!file || !/^image\//.test(file.type)) return reject(new Error("not-image"));
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+            const scale = Math.min(1, IMAGE_MAX_SIDE / Math.max(img.width, img.height));
+            const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+            const canvas = document.createElement("canvas");
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext("2d");
+            ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, w, h);   // transparent PNGs get a white background
+            ctx.drawImage(img, 0, 0, w, h);
+            URL.revokeObjectURL(url);
+            let quality = 0.75, data = canvas.toDataURL("image/jpeg", quality);
+            while (data.length > 120000 && quality > 0.4) {      // keep each photo under ~90 KB
+                quality -= 0.1; data = canvas.toDataURL("image/jpeg", quality);
+            }
+            resolve(data);
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("unreadable")); };
+        img.src = url;
+    });
+}
+
 const S = {
     input:  { width:"100%", padding:"11px 14px", borderRadius:10, border:"1px solid rgba(255,255,255,0.1)", fontSize:14, outline:"none", boxSizing:"border-box", background:"rgba(255,255,255,0.05)", color:"white", fontFamily:"'Inter',Arial,sans-serif" },
     label:  { fontSize:11, fontWeight:700, color:"rgba(255,255,255,0.4)", display:"block", marginBottom:5, letterSpacing:"0.06em", textTransform:"uppercase" },
@@ -585,8 +614,41 @@ function mountInventory(canEdit) {
     }
 
     // ── ITEM MODAL ───────────────────────────────────────────────────────────
-    function ItemModal({ modal, flavors, onClose, onSubmit }) {
+    // ── PHOTO PICKER (inside the item form) ──────────────────────────────────
+    function PhotoPicker({ image, onChange }) {
+        const [busy, setBusy] = useState(false);
+        const [err,  setErr]  = useState("");
+        const inputRef = React.useRef(null);
+        async function pick(ev) {
+            const file = ev.target.files && ev.target.files[0];
+            ev.target.value = "";                      // allow picking the same file again
+            if (!file) return;
+            setErr(""); setBusy(true);
+            try { onChange(await compressImage(file)); }
+            catch (e2) { setErr("⚠️ Couldn't read that picture. Try another one."); }
+            finally { setBusy(false); }
+        }
+        const btn = { padding:"9px 14px", borderRadius:10, fontWeight:700, fontSize:13, cursor:"pointer", border:"1px solid rgba(255,255,255,0.12)", background:"rgba(255,255,255,0.06)", color:"white" };
+        return e("div", { style:{ marginBottom:16 }},
+            e("label", { style:S.label }, "Photo"),
+            e("div", { style:{ display:"flex", alignItems:"center", gap:14 }},
+                e("div", { onClick:()=>inputRef.current && inputRef.current.click(), style:{ width:84, height:84, borderRadius:14, flexShrink:0, cursor:"pointer", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(255,255,255,0.04)", border:image?"1px solid rgba(255,255,255,0.15)":"1px dashed rgba(255,255,255,0.2)", fontSize:26, color:"rgba(255,255,255,0.35)" }},
+                    busy ? "⏳" : image ? e("img", { src:image, alt:"", style:{ width:"100%", height:"100%", objectFit:"cover" }}) : "📷"
+                ),
+                e("div", { style:{ display:"flex", flexDirection:"column", gap:8, alignItems:"flex-start" }},
+                    e("button", { type:"button", disabled:busy, onClick:()=>inputRef.current && inputRef.current.click(), style:btn }, image ? "🔄 Change photo" : "📷 Add photo"),
+                    image && !busy && e("button", { type:"button", onClick:()=>onChange(null), style:{ ...btn, background:"rgba(239,68,68,0.12)", borderColor:"rgba(239,68,68,0.25)", color:"#f87171" }}, "🗑️ Remove")
+                ),
+                e("input", { ref:inputRef, type:"file", accept:"image/*", onChange:pick, style:{ display:"none" }})
+            ),
+            err && e("div", { style:{ marginTop:8, fontSize:12, color:"#f87171", fontWeight:600 }}, err)
+        );
+    }
+
+    function ItemModal({ modal, flavors, currentImage, onClose, onSubmit }) {
         const isAdd = modal === "add";
+        const [image, setImage] = useState(currentImage || null);
+        const [imageChanged, setImageChanged] = useState(false);
         const [form, setForm] = useState(isAdd
             ? { name:"", category:"", quantity:"", sellPrice:"", costPrice:"", boxQuantity:"", boxSellPrice:"", boxCostPrice:"", unitsPerBox:"", priceUp:false, saleType:"Loose", flavors:[] }
             : {
@@ -691,6 +753,8 @@ function mountInventory(canEdit) {
                 e("div", { style:{ width:36, height:4, background:"rgba(255,255,255,0.15)", borderRadius:2, margin:"0 auto 24px" }}),
                 e("div", { style:{ fontWeight:800, fontSize:18, marginBottom:24, color:"white" }}, isAdd ? "➕ Add New Item" : "✏️ Edit Item"),
 
+                e(PhotoPicker, { image, onChange:img=>{ setImage(img); setImageChanged(true); } }),
+
                 e(InputField, { label:"Item Name *",    value:form.name,     onChange:ev=>setForm({...form,name:ev.target.value}),     placeholder:"e.g. Maggi Noodles" }),
                 e(InputField, { label:"Category",       value:form.category, onChange:ev=>setForm({...form,category:ev.target.value}), placeholder:"e.g. Noodles, Sweets, Chips" }),
                 // ── SALE TYPE TOGGLE ─────────────────────────────────────
@@ -759,7 +823,7 @@ function mountInventory(canEdit) {
 
                 e("div", { style:{ display:"flex", gap:10 }},
                     e("button", { onClick:onClose, style:{ flex:1, padding:14, borderRadius:12, border:"1px solid rgba(255,255,255,0.1)", background:"transparent", fontSize:14, fontWeight:700, cursor:"pointer", color:"rgba(255,255,255,0.6)" }}, "Cancel"),
-                    e("button", { onClick:()=>onSubmit(form), style:{ flex:2, padding:14, borderRadius:12, border:"none", background:"linear-gradient(135deg,#f59e0b,#f97316)", fontSize:14, fontWeight:800, cursor:"pointer", color:"#1a1a2e" }}, isAdd ? "Add Item" : "Save Changes")
+                    e("button", { onClick:()=>onSubmit(form, { image, imageChanged }), style:{ flex:2, padding:14, borderRadius:12, border:"none", background:"linear-gradient(135deg,#f59e0b,#f97316)", fontSize:14, fontWeight:800, cursor:"pointer", color:"#1a1a2e" }}, isAdd ? "Add Item" : "Save Changes")
                 )
             )
         );
@@ -777,6 +841,16 @@ function mountInventory(canEdit) {
         const [deleteConfirm, setDeleteConfirm] = useState(null);
         const [showFlavorMgr, setShowFlavorMgr] = useState(false);
         const [expandedId,    setExpandedId]    = useState(null);
+        const [images,        setImages]        = useState({});
+        const [viewImage,     setViewImage]     = useState(null);
+
+        // photos load separately so the stock list shows up first
+        useEffect(() => {
+            if (!db) return;
+            const imagesRef = db.ref("itemImages");
+            imagesRef.on("value", snap => setImages(snap.val() || {}));
+            return () => imagesRef.off();
+        }, []);
 
         useEffect(() => {
             if (!db) { setLoading(false); return; }
@@ -802,7 +876,7 @@ function mountInventory(canEdit) {
                 : "⚠️ Save failed — check your connection");
         }
 
-        function handleSubmit(form) {
+        function handleSubmit(form, photo) {
             if (!form.name.trim()) return showToast("⚠️ Item name is required");
             const isBoth = form.saleType === "Both";
             const qty    = isBoth && form.quantity === "" ? 0 : parseInt(form.quantity);
@@ -826,12 +900,20 @@ function mountInventory(canEdit) {
                 flavors:    form.flavors.length > 0 ? form.flavors : null,
             };
             if (!db) return showToast("⚠️ No database — upload to GitHub first");
+            let itemId;
             if (modal === "add") {
-                db.ref("items").push({ ...base, createdAt: Date.now() }).catch(writeFailed);
+                const ref = db.ref("items").push();
+                itemId = ref.key;
+                ref.set({ ...base, createdAt: Date.now() }).catch(writeFailed);
                 showToast(`✅ "${base.name}" added`);
             } else {
-                db.ref("items/" + modal.item.id).update(base).catch(writeFailed);
+                itemId = modal.item.id;
+                db.ref("items/" + itemId).update(base).catch(writeFailed);
                 showToast(`✏️ "${base.name}" updated`);
+            }
+            if (photo && photo.imageChanged) {
+                const imgRef = db.ref("itemImages/" + itemId);
+                (photo.image ? imgRef.set(photo.image) : imgRef.remove()).catch(writeFailed);
             }
             setModal(null);
         }
@@ -850,6 +932,7 @@ function mountInventory(canEdit) {
         function doDelete() {
             if (!deleteConfirm || !db) return;
             db.ref("items/" + deleteConfirm.id).remove().catch(writeFailed);
+            if (images[deleteConfirm.id]) db.ref("itemImages/" + deleteConfirm.id).remove().catch(writeFailed);
             showToast(`🗑️ "${deleteConfirm.name}" deleted`);
             setDeleteConfirm(null);
         }
@@ -972,6 +1055,11 @@ function mountInventory(canEdit) {
                                 // dot
                                 e("div", { style:{ width:10, height:10, borderRadius:"50%", background:dotColor, flexShrink:0, boxShadow:`0 0 0 3px ${dotShadow}` }}),
 
+                                // photo (tap to see it bigger)
+                                images[item.id] && e("button", { type:"button", onClick:()=>setViewImage({ src:images[item.id], name:item.name }), title:"View photo", style:{ width:54, height:54, padding:0, borderRadius:12, overflow:"hidden", flexShrink:0, cursor:"zoom-in", border:"1px solid rgba(255,255,255,0.18)", background:"#fff", boxShadow:"0 4px 12px rgba(0,0,0,0.25)" }},
+                                    e("img", { src:images[item.id], alt:item.name, draggable:false, decoding:"async", loading:"lazy", style:{ width:"100%", height:"100%", objectFit:"cover", display:"block", opacity:item.outOfStock?0.45:1, filter:item.outOfStock?"grayscale(1)":"none" }})
+                                ),
+
                                 // info
                                 e("div", { style:{ flex:1, minWidth:0 }},
                                     e("div", { style:{ display:"flex", alignItems:"center", gap:7, flexWrap:"wrap", marginBottom:5 }},
@@ -1041,7 +1129,14 @@ function mountInventory(canEdit) {
             ),
 
             // MODALS
-            modal         && e(ItemModal,     { modal, flavors, onClose:()=>setModal(null), onSubmit:handleSubmit }),
+            modal         && e(ItemModal,     { modal, flavors, currentImage: modal !== "add" ? images[modal.item.id] : null, onClose:()=>setModal(null), onSubmit:handleSubmit }),
+
+            // full-size photo viewer
+            viewImage && e("div", { onClick:()=>setViewImage(null), style:{ position:"fixed", inset:0, background:"rgba(0,0,0,0.85)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", zIndex:350, padding:20, cursor:"zoom-out" }},
+                e("img", { src:viewImage.src, alt:viewImage.name, draggable:false, style:{ maxWidth:"100%", maxHeight:"78vh", borderRadius:18, boxShadow:"0 20px 60px rgba(0,0,0,0.6)", objectFit:"contain", background:"#fff" }}),
+                e("div", { style:{ marginTop:14, color:"white", fontWeight:700, fontSize:16, textAlign:"center" }}, viewImage.name),
+                e("div", { style:{ marginTop:4, color:"rgba(255,255,255,0.45)", fontSize:12 }}, "Tap anywhere to close")
+            ),
             showFlavorMgr && e(FlavorManager, { flavors, onClose:()=>setShowFlavorMgr(false), onSave:saveFlavorsHandler }),
 
             // DELETE CONFIRM

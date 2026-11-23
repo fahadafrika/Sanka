@@ -10,6 +10,13 @@
       ".read": true,
       ".write": "auth != null && root.child('staff').child(auth.uid).val() === true"
     },
+    "itemImages": {
+      ".read": true,
+      "$itemId": {
+        ".write": "auth != null && root.child('staff').child(auth.uid).val() === true",
+        ".validate": "newData.isString() && newData.val().beginsWith('data:image/') && newData.val().length < 200000"
+      }
+    },
     "staff": {
       ".read": false,
       ".write": false
